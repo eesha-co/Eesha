@@ -1,0 +1,54 @@
+# Rust build artifacts
+/target/
+**/target/
+
+# Build artifacts
+*.o
+*.so
+*.dll
+*.dylib
+*.d
+
+# Cargo cache
+.cargo/registry/
+.cargo/git/
+
+# Node/Next.js (dev environment only)
+node_modules/
+.next/
+bun.lock
+package.json
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env*
+*.pem
+
+# Logs
+*.log
+dev.log
+
+# Upload directory
+/upload/
+
+# Agent/context
+/agent-ctx/
+.cache/
+.zscripts/
+.claude
+.z-ai-config
+
+# Dev tools
+local-*
+TODO
+worklog.md
