@@ -14,8 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Rust
+        uses: dsherret/rust-toolchain-file@v1
+
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.4
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       # https://github.com/servo/servo/blob/a0730d7154e183a9b2d9a9282061e6c67d87a263/.github/workflows/linux.yml#L141
       - name: Set LIBCLANG_PATH # This is needed for bindgen in mozangle.
@@ -40,7 +43,7 @@ jobs:
       - name: Build
         env:
           SCCACHE_GHA_ENABLED: true
-          RUSTC_WRAPPER: 'sccache'
+          RUSTC_WRAPPER: sccache
         run: cargo build --features embed-useragent-stylesheets --release
 
       - name: Make archive
@@ -56,8 +59,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dsherret/rust-toolchain-file@v1
+
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.4
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       - name: Install Python
         uses: actions/setup-python@v5
@@ -69,14 +76,18 @@ jobs:
 
       - name: Install scoop
         uses: MinoruSekine/setup-scoop@v4
+
       - name: Install dependencies
         run: |
           scoop install cmake
 
+      - name: Upgrade LLVM
+        run: choco upgrade llvm -y
+
       - name: Build
         env:
           SCCACHE_GHA_ENABLED: true
-          RUSTC_WRAPPER: "sccache"
+          RUSTC_WRAPPER: sccache
         run: cargo build --features embed-useragent-stylesheets --release
 
       - name: Make archive
@@ -91,6 +102,7 @@ jobs:
 
   build-mac:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - target: aarch64-apple-darwin
@@ -98,8 +110,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dsherret/rust-toolchain-file@v1
+
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.4
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       - name: Install Python
         uses: actions/setup-python@v5
@@ -112,9 +128,9 @@ jobs:
       - name: Install dependencies
         run: |
           brew install cmake
-          curl https://gstreamer.freedesktop.org/data/pkg/osx/1.24.6/gstreamer-1.0-1.24.6-universal.pkg -o runtime.pkg
+          curl -L https://gstreamer.freedesktop.org/data/pkg/osx/1.24.6/gstreamer-1.0-1.24.6-universal.pkg -o runtime.pkg
           sudo installer -pkg runtime.pkg -target /
-          curl https://gstreamer.freedesktop.org/data/pkg/osx/1.24.6/gstreamer-1.0-devel-1.24.6-universal.pkg -o develop.pkg
+          curl -L https://gstreamer.freedesktop.org/data/pkg/osx/1.24.6/gstreamer-1.0-devel-1.24.6-universal.pkg -o develop.pkg
           sudo installer -pkg develop.pkg -target /
 
       - name: Add rust target
@@ -123,7 +139,7 @@ jobs:
       - name: Build
         env:
           SCCACHE_GHA_ENABLED: true
-          RUSTC_WRAPPER: "sccache"
+          RUSTC_WRAPPER: sccache
         run: cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release
 
       - name: Make archive
@@ -144,6 +160,10 @@ jobs:
       - build-mac
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dsherret/rust-toolchain-file@v1
+
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
