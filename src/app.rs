@@ -128,6 +128,10 @@ impl Eesha {
         let (config, to_controller_sender) = try_connect_ipc_and_get_config(&proxy);
         let (eesha_internal_sender, eesha_internal_receiver) = ipc_channel::ipc::channel().unwrap();
 
+        // Log resource directory for diagnostics
+        log::info!("Resource directory: {:?}", config.resource_dir);
+        log::info!("Resources directory exists: {}", config.resource_dir.exists());
+
         // Initialize configurations and Eesha window
         let protocols = config.create_protocols();
         let initial_url = config.url.clone();
@@ -397,6 +401,14 @@ impl Eesha {
         };
 
         eesha.setup_logging();
+
+        // Log diagnostic information after logger is set up
+        log::info!("Eesha browser initialized successfully");
+        log::info!("Resource directory: {:?}", eesha.config.resource_dir);
+        log::info!("Resources directory exists: {}", eesha.config.resource_dir.exists());
+        log::info!("Executable path: {:?}", std::env::current_exe());
+        log::info!("Current directory: {:?}", std::env::current_dir());
+
         eesha
     }
 

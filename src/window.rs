@@ -120,7 +120,7 @@ impl Window {
     ) -> (Self, RenderingContext) {
         let template = ConfigTemplateBuilder::new()
             .with_alpha_size(8)
-            .with_transparency(true);
+            .with_transparency(window_attributes.transparent);
 
         let (window, gl_config) = DisplayBuilder::new()
             .with_window_attributes(Some(window_attributes))

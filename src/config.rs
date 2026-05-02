@@ -555,7 +555,43 @@ fn resources_dir_path() -> PathBuf {
         std::path::PathBuf::from_str("/app")
     };
     #[cfg(not(any(feature = "packager", feature = "flatpak")))]
-    let root_dir = std::env::current_dir();
+    let root_dir = {
+        // First, try to find resources relative to the executable.
+        // This is essential for standalone/distributed builds where the user
+        // runs the binary from a different working directory (e.g., double-clicking on Windows).
+        if let Some(exe_dir) = std::env::current_exe()
+            .ok()
+            .and_then(|exe_path| exe_path.parent().map(|p| p.to_path_buf()))
+        {
+            let exe_resources = exe_dir.join("resources");
+            if exe_resources.exists() {
+                println!("Eesha: Using resources from executable directory: {}", exe_resources.display());
+                Some(exe_dir)
+            } else {
+                // Fallback to current directory if resources exist there
+                if let Ok(cwd) = std::env::current_dir() {
+                    let cwd_resources = cwd.join("resources");
+                    if cwd_resources.exists() {
+                        println!("Eesha: Using resources from current directory: {}", cwd_resources.display());
+                        Some(cwd)
+                    } else {
+                        println!("Eesha WARNING: Resources directory not found!");
+                        println!("  Tried: {}", exe_resources.display());
+                        println!("  Tried: {}", cwd_resources.display());
+                        println!("  Please ensure the 'resources' folder is next to the executable.");
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+        } else {
+            None
+        }
+        .ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::NotFound, "resources directory not found")
+        })
+    };
 
     root_dir.ok().map(|dir| dir.join("resources")).unwrap()
 }
