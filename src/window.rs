@@ -43,6 +43,7 @@ use winit::{
 
 use crate::{
     bookmark::BookmarkManager,
+    chrome::{NativeChrome, ChromeAction, ChromeElementId, ChromeFocusTarget},
     compositor::IOCompositor,
     keyboard::keyboard_event_from_winit,
     rendering::{RenderingContext, gl_config_picker},
@@ -83,8 +84,11 @@ pub struct Window {
     cursor_state: CursorState,
     /// GL surface of the window
     pub(crate) surface: Surface<WindowSurface>,
-    /// The main panel of this window.
+    /// The main panel of this window (HTML-based, legacy).
     pub(crate) panel: Option<Panel>,
+    /// Native chrome replacing HTML panel (rendered with WebRender primitives).
+    /// When present, the native chrome is used instead of the HTML panel.
+    pub(crate) native_chrome: Option<NativeChrome>,
     /// The WebView of this window.
     // pub(crate) webview: Option<WebView>,
     /// Event listeners registered from the webview controller
@@ -152,6 +156,7 @@ impl Window {
                 cursor_state: CursorState::default(),
                 surface,
                 panel: None,
+                native_chrome: None,
                 event_listeners: Default::default(),
                 mouse_position: Default::default(),
                 modifiers_state: Cell::new(ModifiersState::default()),
@@ -200,6 +205,7 @@ impl Window {
             cursor_state: CursorState::default(),
             surface,
             panel: None,
+            native_chrome: None,
             // webview: None,
             event_listeners: Default::default(),
             mouse_position: Default::default(),
@@ -225,7 +231,14 @@ impl Window {
         include_tab: bool,
         include_bookmark: bool,
     ) -> DeviceRect {
-        if self.panel.is_some() {
+        // Native chrome takes precedence over HTML panel
+        if let Some(chrome) = &self.native_chrome {
+            let chrome_height = chrome.total_height() * self.scale_factor() as f32;
+            size.min.y = size.max.y.min(chrome_height);
+            size.min.x += 10.0;
+            size.max.y -= 10.0;
+            size.max.x -= 10.0;
+        } else if self.panel.is_some() {
             let mut height: f64 = PANEL_HEIGHT + PANEL_PADDING;
             if include_tab {
                 height += TAB_HEIGHT;
@@ -240,6 +253,11 @@ impl Window {
             size.max.x -= 10.0;
         }
         size
+    }
+
+    /// Check if the browser chrome (either native or panel) is active
+    pub fn has_chrome(&self) -> bool {
+        self.native_chrome.is_some() || self.panel.is_some()
     }
 
     /// Send the constellation message to start Panel UI
@@ -901,8 +919,11 @@ impl Window {
     /// Get the painting order of this window.
     pub fn painting_order(&self) -> Vec<&WebView> {
         let mut order = vec![];
-        if let Some(panel) = &self.panel {
-            order.push(&panel.webview);
+        // Only include panel in painting order if native chrome is not active
+        if self.native_chrome.is_none() {
+            if let Some(panel) = &self.panel {
+                order.push(&panel.webview);
+            }
         }
 
         if let Some(tab) = self.tab_manager.current_tab() {

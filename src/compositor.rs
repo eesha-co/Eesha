@@ -987,8 +987,20 @@ impl IOCompositor {
 
         let root_clip_id = builder.define_clip_rect(zoom_reference_frame, viewport_rect);
         let root_clip_chain_id = builder.define_clip_chain(None, [root_clip_id]);
-        // Only decorate the webviews if we're in the browser mode
-        let should_decorate = window.panel.is_some();
+        // Only decorate the webviews if we're in the browser mode (panel or native chrome)
+        let should_decorate = window.has_chrome();
+
+        // Render native chrome display list before content iframes
+        if let Some(chrome) = &window.native_chrome {
+            chrome.build_display_list(
+                &mut builder,
+                root_pipeline,
+                viewport_rect.size.width,
+                zoom_factor,
+                zoom_reference_frame,
+            );
+        }
+
         for webview in window.painting_order() {
             if let Some(pipeline_id) = self.webviews.get(&webview.webview_id) {
                 let scaled_webview_rect =

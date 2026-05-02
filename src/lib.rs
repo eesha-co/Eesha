@@ -44,3 +44,7 @@ pub(crate) mod storage;
 pub mod tab;
 /// Utilities
 pub(crate) mod utils;
+/// Native Chrome - browser UI rendered with WebRender primitives
+/// instead of HTML-based panel. Provides secure, native rendering
+/// of the toolbar, tab bar, address bar, and bookmark bar.
+pub mod chrome;
