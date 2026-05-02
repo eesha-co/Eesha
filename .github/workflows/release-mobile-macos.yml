@@ -74,13 +74,12 @@ jobs:
           RUSTC_WRAPPER: sccache
         run: |
           # Set up NDK toolchain for cargo
-          cat > .cargo/config.android.toml << EOF
+          mkdir -p .cargo
+          cat >> .cargo/config.toml << EOF
           [target.${{ matrix.target }}]
           linker = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang"
           ar = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
           EOF
-          mkdir -p .cargo
-          cat .cargo/config.android.toml >> .cargo/config.toml
 
           # Build the Rust library for Android
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib
