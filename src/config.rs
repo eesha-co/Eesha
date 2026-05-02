@@ -320,13 +320,25 @@ impl Config {
             .user_agent
             .unwrap_or_else(|| default_user_agent_string().to_string());
 
+        // Use the provided icon, or fall back to the embedded Eesha icon
+        let window_icon = config.icon.and_then(|icon| {
+            winit::window::Icon::from_rgba(icon.rgba, icon.width, icon.height).ok()
+        }).or_else(|| {
+            // Load the default embedded Eesha icon
+            const EESHA_ICON_RGBA: &[u8] = include_bytes!("../icons/icon32x32.rgba");
+            const EESHA_ICON_SIZE: u32 = 32;
+            winit::window::Icon::from_rgba(
+                EESHA_ICON_RGBA.to_vec(),
+                EESHA_ICON_SIZE,
+                EESHA_ICON_SIZE,
+            ).ok()
+        });
+
         let mut window_attributes = winit::window::Window::default_attributes()
             .with_transparent(config.transparent)
             .with_decorations(config.decorated)
             .with_title(config.title.unwrap_or("Eesha".to_owned()))
-            .with_window_icon(config.icon.and_then(|icon| {
-                winit::window::Icon::from_rgba(icon.rgba, icon.width, icon.height).ok()
-            }));
+            .with_window_icon(window_icon);
         // set min inner size
         // should be at least able to show the whole control panel
         // FIXME: url input has weird behavior that will expand lager when having long text

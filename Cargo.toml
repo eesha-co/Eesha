@@ -80,6 +80,10 @@ embed-useragent-stylesheets = []
 
 [build-dependencies]
 cfg_aliases = "0.2"
+embed-resource = { version = "3", optional = true }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+embed-resource = "3"
 
 [dependencies]
 arboard = "3.4.0"

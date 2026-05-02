@@ -21,4 +21,13 @@ fn main() {
 
     #[cfg(all(feature = "packager", target_os = "macos"))]
     println!("cargo:rustc-link-arg=-Wl,-rpath,@executable_path/../Resources/lib");
+
+    // Embed Windows icon and version info into the .exe
+    #[cfg(target_os = "windows")]
+    {
+        let rc_file = std::path::Path::new("resources/eesha.rc");
+        if rc_file.exists() {
+            embed_resource::compile(rc_file, embed_resource::NONE);
+        }
+    }
 }
