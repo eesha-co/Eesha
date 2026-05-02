@@ -12,7 +12,7 @@ use webrender_api::{
 };
 
 use super::state::ChromeState;
-use super::widget::{WidgetId, WidgetKind, WidgetRect};
+use super::widget::{WidgetId, WidgetKind, WidgetRect, ChromeUnit};
 use super::theme::ChromeTheme;
 use super::{TAB_BAR_HEIGHT, NAV_BAR_HEIGHT, BOOKMARK_BAR_HEIGHT, CHROME_PADDING, WIDGET_SPACING};
 
@@ -142,7 +142,7 @@ impl ChromePainter {
             clip_chain_id,
         };
 
-        let props = CommonItemProperties::new(rect, &clipped_space);
+        let props = CommonItemProperties::new(rect, clipped_space);
         builder.push_rect(&props, rect, color);
     }
 

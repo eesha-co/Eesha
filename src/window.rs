@@ -43,7 +43,7 @@ use winit::{
 
 use crate::{
     bookmark::BookmarkManager,
-    chrome::{ChromeState, ChromeEventHandler, ChromeEventResult, CHROME_HEIGHT},
+    chrome::{ChromeState, ChromeEventHandler, ChromeEventResult},
     compositor::IOCompositor,
     keyboard::keyboard_event_from_winit,
     rendering::{RenderingContext, gl_config_picker},

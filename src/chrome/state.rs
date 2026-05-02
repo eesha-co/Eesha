@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use base::id::WebViewId;
 use webrender_api::units::DeviceRect;
 
-use super::widget::{WidgetIdCounter, WidgetRect, WidgetKind};
+use super::widget::{WidgetId, WidgetIdCounter, WidgetRect, WidgetKind, ChromeUnit};
 use super::theme::ChromeTheme;
 use super::{TAB_BAR_HEIGHT, NAV_BAR_HEIGHT, BOOKMARK_BAR_HEIGHT, CHROME_PADDING};
 
@@ -210,8 +210,10 @@ impl ChromeState {
     pub fn set_loading(&mut self, webview_id: WebViewId, loading: bool) {
         if let Some(tab) = self.tabs.iter_mut().find(|t| t.webview_id == webview_id) {
             tab.loading = loading;
-            if tab.webview_id == self.tabs.get(self.active_tab_index).map(|t| t.webview_id).unwrap_or_default() {
+            if let Some(active_tab) = self.tabs.get(self.active_tab_index) {
+                if tab.webview_id == active_tab.webview_id {
                 self.nav_state.loading = loading;
+                }
             }
             self.mark_dirty();
         }
@@ -223,7 +225,7 @@ impl ChromeState {
     }
 
     /// Generate a new widget ID
-    pub fn next_widget_id(&self) -> super::widget::WidgetId {
+    pub fn next_widget_id(&self) -> WidgetId {
         self.widget_id_counter.next()
     }
 
@@ -298,16 +300,15 @@ impl ChromeState {
     /// Get the content area rect (the area where web content is drawn)
     pub fn content_rect(&self, window_rect: DeviceRect, scale_factor: f32) -> DeviceRect {
         let chrome_height = self.chrome_height(scale_factor);
-        DeviceRect::new(
-            webrender_api::units::DeviceIntPoint::new(
-                window_rect.min().x,
-                (window_rect.min().y as f32 + chrome_height) as i32,
-            ),
-            webrender_api::units::DeviceIntSize::new(
-                window_rect.width() as i32,
-                (window_rect.height() as f32 - chrome_height) as i32,
-            ),
-        ).to_f32()
+        let origin = webrender_api::units::DevicePoint::new(
+            window_rect.min.x,
+            window_rect.min.y + chrome_height,
+        );
+        let size = webrender_api::units::DeviceSize::new(
+            window_rect.width(),
+            window_rect.height() - chrome_height,
+        );
+        DeviceRect::from_origin_and_size(origin, size)
     }
 
     /// Get the active tab info

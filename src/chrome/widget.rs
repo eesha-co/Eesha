@@ -3,7 +3,10 @@
 //! Defines the widget types used in the native browser chrome.
 //! Each widget has an ID, a kind, and a bounding rectangle for hit testing.
 
-use euclid::Rect;
+use euclid::{Point2D, Rect, UnknownUnit};
+
+/// Marker type for device-pixel rectangles in chrome widgets
+pub type ChromeUnit = UnknownUnit;
 
 /// Unique identifier for a widget within the chrome
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -44,7 +47,7 @@ pub struct WidgetRect {
     /// Kind of widget
     pub kind: WidgetKind,
     /// Bounding rectangle in device pixels
-    pub rect: Rect<f32, euclid::DeviceUnit>,
+    pub rect: Rect<f32, ChromeUnit>,
     /// Whether the widget is currently hovered
     pub hovered: bool,
     /// Whether the widget is currently pressed
@@ -55,7 +58,7 @@ pub struct WidgetRect {
 
 impl WidgetRect {
     /// Create a new widget rect
-    pub fn new(id: WidgetId, kind: WidgetKind, rect: Rect<f32, euclid::DeviceUnit>) -> Self {
+    pub fn new(id: WidgetId, kind: WidgetKind, rect: Rect<f32, ChromeUnit>) -> Self {
         Self {
             id,
             kind,
@@ -68,21 +71,21 @@ impl WidgetRect {
 
     /// Check if a point is inside this widget
     pub fn contains_point(&self, x: f32, y: f32) -> bool {
-        self.rect.contains(euclid::Point2D::new(x, y))
+        self.rect.contains(Point2D::new(x, y))
     }
 }
 
 /// Widget ID counter for generating unique IDs
 #[derive(Default)]
 pub struct WidgetIdCounter {
-    next_id: u64,
+    next_id: std::cell::Cell<u64>,
 }
 
 impl WidgetIdCounter {
     /// Generate a new unique widget ID
-    pub fn next(&mut self) -> WidgetId {
-        let id = self.next_id;
-        self.next_id += 1;
+    pub fn next(&self) -> WidgetId {
+        let id = self.next_id.get();
+        self.next_id.set(id + 1);
         WidgetId(id)
     }
 }

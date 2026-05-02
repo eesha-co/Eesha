@@ -4,14 +4,13 @@
 //! This replaces the JavaScript-based event handling of the HTML panel.
 
 use base::id::WebViewId;
-use constellation_traits::EmbedderToConstellationMessage;
+use constellation_traits::{EmbedderToConstellationMessage, TraversalDirection};
 use crossbeam_channel::Sender;
-use embedder_traits::{MouseButton, MouseButtonAction, InputEvent, MouseButtonEvent};
+use embedder_traits::MouseButton;
 use servo_url::ServoUrl;
 
 use super::state::ChromeState;
 use super::widget::{WidgetId, WidgetKind};
-use super::ChromeTheme;
 
 /// Result of handling a chrome event
 #[derive(Clone, Debug)]
@@ -67,6 +66,11 @@ impl ChromeEventHandler {
         widget.is_some()
     }
 
+    /// Check if a mouse button is the left button using pattern matching
+    fn is_left_button(button: MouseButton) -> bool {
+        matches!(button, MouseButton::Left)
+    }
+
     /// Handle a mouse button down event within the chrome area.
     /// Returns (consumed, result) where consumed indicates the event was handled
     /// and result contains any action to take.
@@ -76,7 +80,7 @@ impl ChromeEventHandler {
         y: f32,
         button: MouseButton,
     ) -> (bool, ChromeEventResult) {
-        if button != MouseButton::Left {
+        if !Self::is_left_button(button) {
             return (false, ChromeEventResult::None);
         }
 
@@ -98,7 +102,7 @@ impl ChromeEventHandler {
         y: f32,
         button: MouseButton,
     ) -> (bool, ChromeEventResult) {
-        if button != MouseButton::Left {
+        if !Self::is_left_button(button) {
             return (false, ChromeEventResult::None);
         }
 
@@ -182,7 +186,7 @@ impl ChromeEventHandler {
         state: &mut ChromeState,
         key: &keyboard_types::Key,
         state_key: keyboard_types::KeyState,
-        modifiers: keyboard_types::Modifiers,
+        _modifiers: keyboard_types::Modifiers,
     ) -> (bool, ChromeEventResult) {
         if !state.url_bar.focused {
             return (false, ChromeEventResult::None);
@@ -293,14 +297,20 @@ impl ChromeEventHandler {
             ChromeEventResult::GoBack => {
                 if let Some(webview_id) = state.active_webview_id() {
                     let _ = constellation_sender.send(
-                        EmbedderToConstellationMessage::GoBack(webview_id)
+                        EmbedderToConstellationMessage::TraverseHistory(
+                            webview_id,
+                            TraversalDirection::Back(1),
+                        )
                     );
                 }
             }
             ChromeEventResult::GoForward => {
                 if let Some(webview_id) = state.active_webview_id() {
                     let _ = constellation_sender.send(
-                        EmbedderToConstellationMessage::GoForward(webview_id)
+                        EmbedderToConstellationMessage::TraverseHistory(
+                            webview_id,
+                            TraversalDirection::Forward(1),
+                        )
                     );
                 }
             }
@@ -312,11 +322,9 @@ impl ChromeEventHandler {
                 }
             }
             ChromeEventResult::StopLoading => {
-                if let Some(webview_id) = state.active_webview_id() {
-                    let _ = constellation_sender.send(
-                        EmbedderToConstellationMessage::StopLoading(webview_id)
-                    );
-                }
+                // Servo doesn't have a StopLoading message; reload is the closest equivalent
+                // or we can just ignore this for now
+                log::debug!("StopLoading requested but not directly supported by constellation");
             }
             ChromeEventResult::GoHome => {
                 let home_url = ServoUrl::parse("eesha://newtab").unwrap();
@@ -345,20 +353,15 @@ impl ChromeEventHandler {
                 }
             }
             ChromeEventResult::NewTab => {
-                // This needs to be handled at a higher level (in the Window/App)
-                // For now, send a message that will be intercepted
-                let _ = constellation_sender.send(
-                    EmbedderToConstellationMessage::NewWebView(
-                        ServoUrl::parse("eesha://newtab").unwrap(),
-                    )
-                );
+                // NewTab needs to be handled at the Window/App level because it needs
+                // a WebViewId and ViewportDetails. Send a simpler approach - we just log
+                // and the keyboard shortcut (Ctrl+T) handles this at the window level.
+                log::debug!("NewTab requested via chrome - should be handled at window level");
             }
             ChromeEventResult::SwitchTab(index) => {
                 state.set_active_tab(index);
             }
             ChromeEventResult::CloseTab(index) => {
-                // This needs to be handled at a higher level
-                // We'll use the same message pattern
                 if let Some(tab) = state.tabs.get(index) {
                     let _ = constellation_sender.send(
                         EmbedderToConstellationMessage::CloseWebView(tab.webview_id)
