@@ -95,15 +95,16 @@ jobs:
         run: cargo build --features embed-useragent-stylesheets --release
 
       - name: Make archive
+        shell: pwsh
         run: |
-          mkdir eesha-release
-          copy target\release\eesha.exe eesha-release\
-          xcopy resources eesha-release\resources\ /E /I /Y
-          xcopy icons eesha-release\icons\ /E /I /Y
-          REM Copy ANGLE DLLs (libEGL.dll, libGLESv2.dll) from build output
-          REM These are needed for OpenGL ES rendering on Windows via ANGLE
-          for /R "target\release\build" %%f in (libEGL.dll) do copy "%%f" eesha-release\ 2>nul
-          for /R "target\release\build" %%f in (libGLESv2.dll) do copy "%%f" eesha-release\ 2>nul
+          New-Item -ItemType Directory -Force -Path eesha-release
+          Copy-Item target\release\eesha.exe eesha-release\
+          Copy-Item -Recurse -Force resources eesha-release\resources
+          Copy-Item -Recurse -Force icons eesha-release\icons
+          # Copy ANGLE DLLs (libEGL.dll, libGLESv2.dll) from build output
+          # These are needed for OpenGL ES rendering on Windows via ANGLE
+          Get-ChildItem -Path "target\release\build" -Recurse -Filter "libEGL.dll" | ForEach-Object { Copy-Item $_.FullName eesha-release\ }
+          Get-ChildItem -Path "target\release\build" -Recurse -Filter "libGLESv2.dll" | ForEach-Object { Copy-Item $_.FullName eesha-release\ }
           cd eesha-release
           tar -czvf ..\eesha-x86_64-pc-windows-msvc.tar.gz .
 
