@@ -54,7 +54,13 @@ targets = [
   "x86_64-unknown-linux-gnu",
   "x86_64-pc-windows-msvc",
   "x86_64-apple-darwin",
+  "aarch64-linux-android",
+  "aarch64-apple-ios",
 ]
+
+[lib]
+name = "eesha"
+crate-type = ["lib", "cdylib", "staticlib"]
 
 [features]
 bluetooth = [

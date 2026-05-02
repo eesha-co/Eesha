@@ -5,6 +5,10 @@
 
 #![deny(missing_docs)]
 
+/// Android JNI entry point
+#[cfg(target_os = "android")]
+mod android;
+
 /// Eesha's compositor component to handle webrender.
 pub mod compositor;
 /// Utilities to read options and preferences.
