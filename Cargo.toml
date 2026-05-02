@@ -179,5 +179,6 @@ inherits = "release"
 lto = true
 
 # Declare expected cfgs from cfg_aliases in build.rs
+# Note: `windows` and `unix` are built-in Rust cfg keys, no declaration needed.
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(windows)', 'cfg(linux)', 'cfg(macos)', 'cfg(ios)', 'cfg(android)', 'cfg(apple)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(linux)', 'cfg(macos)', 'cfg(ios)', 'cfg(android)', 'cfg(apple)'] }
