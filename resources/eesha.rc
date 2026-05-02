@@ -5,8 +5,8 @@
 
 // Version information
 1 VERSIONINFO
-FILEVERSION 0,1,0,0
-PRODUCTVERSION 0,1,0,0
+FILEVERSION 0,1,1,0
+PRODUCTVERSION 0,1,1,0
 FILEFLAGSMASK 0x3fL
 FILEFLAGS 0x0L
 FILEOS 0x40004L
@@ -19,12 +19,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Eesha Browser Project"
             VALUE "FileDescription", "Eesha - A modern web browser powered by Servo"
-            VALUE "FileVersion", "0.1.0"
+            VALUE "FileVersion", "0.1.1"
             VALUE "InternalName", "eesha"
             VALUE "LegalCopyright", "Copyright 2024 Eesha Browser Project"
             VALUE "OriginalFilename", "eesha.exe"
             VALUE "ProductName", "Eesha"
-            VALUE "ProductVersion", "0.1.0"
+            VALUE "ProductVersion", "0.1.1"
         END
     END
     BLOCK "VarFileInfo"

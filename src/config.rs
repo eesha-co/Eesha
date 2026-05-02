@@ -611,17 +611,17 @@ fn resources_dir_path() -> PathBuf {
 fn default_user_agent_string() -> &'static str {
     #[cfg(macos)]
     const UA_STRING: &str =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Eesha/0.1.0 Firefox/111.0";
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Eesha/0.1.1 Firefox/111.0";
     #[cfg(ios)]
     const UA_STRING: &str =
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_4 like Mac OS X; rv:109.0) Eesha/0.1.0 Firefox/111.0";
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_4 like Mac OS X; rv:109.0) Eesha/0.1.1 Firefox/111.0";
     #[cfg(android)]
-    const UA_STRING: &str = "Mozilla/5.0 (Android; Mobile; rv:109.0) Eesha/0.1.0 Firefox/111.0";
+    const UA_STRING: &str = "Mozilla/5.0 (Android; Mobile; rv:109.0) Eesha/0.1.1 Firefox/111.0";
     #[cfg(linux)]
-    const UA_STRING: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Eesha/0.1.0 Firefox/111.0";
+    const UA_STRING: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Eesha/0.1.1 Firefox/111.0";
     #[cfg(windows)]
     const UA_STRING: &str =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Eesha/0.1.0 Firefox/111.0";
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Eesha/0.1.1 Firefox/111.0";
 
     UA_STRING
 }
