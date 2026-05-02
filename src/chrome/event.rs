@@ -110,7 +110,7 @@ impl ChromeEventHandler {
         let widget = state.widget_at_point(x, y);
 
         // Only trigger click if releasing on the same widget that was pressed
-        if let (Some(pressed_id), Some(ref release_widget)) = (pressed, &widget) {
+        if let (Some(pressed_id), Some(release_widget)) = (pressed, &widget) {
             if pressed_id == release_widget.id {
                 let result = Self::handle_widget_click(state, &release_widget.kind);
                 state.set_pressed(None);
