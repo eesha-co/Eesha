@@ -361,7 +361,9 @@ impl Eesha {
         }
 
         if with_panel {
-            window.create_panel(&constellation_sender, initial_url);
+            // Use native chrome instead of HTML panel
+            window.create_native_chrome();
+            window.create_tab(&constellation_sender, ServoUrl::parse("eesha://newtab").unwrap());
         } else {
             window.create_tab(&constellation_sender, initial_url.into());
         }
@@ -550,9 +552,10 @@ impl Eesha {
                                         compositor,
                                         self.eesha_internal_sender.clone(),
                                     );
-                                    window.create_panel(
+                                    window.create_native_chrome();
+                                    window.create_tab(
                                         &self.constellation_sender,
-                                        self.config.url.clone(),
+                                        ServoUrl::parse("eesha://newtab").unwrap(),
                                     );
                                     let webrender_document = *document;
                                     self.windows

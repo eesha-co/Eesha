@@ -43,6 +43,7 @@ use winit::{
 
 use crate::{
     bookmark::BookmarkManager,
+    chrome::{ChromeState, ChromeEventHandler, ChromeEventResult, CHROME_HEIGHT},
     compositor::IOCompositor,
     keyboard::keyboard_event_from_winit,
     rendering::{RenderingContext, gl_config_picker},
@@ -109,6 +110,8 @@ pub struct Window {
     pub(crate) reqwest_client: Client,
     /// The sender for the Eesha internal channel
     pub(crate) eesha_internal_sender: IpcSender<EeshaInternalMsg>,
+    /// Native browser chrome state (replaces HTML panel)
+    pub(crate) chrome: Option<ChromeState>,
 }
 
 impl Window {
@@ -152,6 +155,7 @@ impl Window {
                 cursor_state: CursorState::default(),
                 surface,
                 panel: None,
+                chrome: None,
                 event_listeners: Default::default(),
                 mouse_position: Default::default(),
                 modifiers_state: Cell::new(ModifiersState::default()),
@@ -200,6 +204,7 @@ impl Window {
             cursor_state: CursorState::default(),
             surface,
             panel: None,
+            chrome: None,
             // webview: None,
             event_listeners: Default::default(),
             mouse_position: Default::default(),
@@ -225,7 +230,14 @@ impl Window {
         include_tab: bool,
         include_bookmark: bool,
     ) -> DeviceRect {
-        if self.panel.is_some() {
+        // Native chrome takes priority
+        if self.chrome.is_some() {
+            let chrome_height = self.chrome.as_ref().unwrap().chrome_height(self.scale_factor() as f32);
+            size.min.y = size.max.y.min(chrome_height);
+            size.min.x += 0.0;
+            size.max.y -= 0.0;
+            size.max.x -= 0.0;
+        } else if self.panel.is_some() {
             let mut height: f64 = PANEL_HEIGHT + PANEL_PADDING;
             if include_tab {
                 height += TAB_HEIGHT;
@@ -240,6 +252,14 @@ impl Window {
             size.max.x -= 10.0;
         }
         size
+    }
+
+    /// Create native browser chrome (replaces HTML panel)
+    pub fn create_native_chrome(&mut self) {
+        if self.chrome.is_none() {
+            self.chrome = Some(ChromeState::new());
+            log::info!("Native browser chrome created");
+        }
     }
 
     /// Send the constellation message to start Panel UI
@@ -294,7 +314,10 @@ impl Window {
         let mut webview = WebView::new(webview_id, viewport_details);
         webview.set_size(content_size);
 
-        if let Some(panel) = &self.panel {
+        // Register tab in native chrome if active
+        if let Some(chrome) = &mut self.chrome {
+            chrome.add_tab(webview_id, initial_url.to_string());
+        } else if let Some(panel) = &self.panel {
             let cmd: String = format!(
                 "window.navbar.addTab('{}', {})",
                 serde_json::to_string(&webview.webview_id).unwrap(),
@@ -437,6 +460,29 @@ impl Window {
             WindowEvent::CursorMoved { position, .. } => {
                 let point: DevicePoint = DevicePoint::new(position.x as f32, position.y as f32);
                 self.mouse_position.set(Some(*position));
+
+                // Handle native chrome mouse move
+                if let Some(chrome) = &self.chrome {
+                    let chrome_height = chrome.chrome_height(self.scale_factor() as f32);
+                    if point.y < chrome_height {
+                        let consumed = ChromeEventHandler::handle_mouse_move(chrome, point.x, point.y);
+                        if consumed {
+                            // Set cursor to pointer for interactive widgets
+                            let widget = chrome.widget_at_point(point.x, point.y);
+                            if widget.is_some() {
+                                self.window.set_cursor(CursorIcon::Pointer);
+                            } else {
+                                self.window.set_cursor(CursorIcon::Default);
+                            }
+                            // Request repaint for hover effects
+                            if chrome.take_dirty() {
+                                compositor.send_root_pipeline_display_list(self);
+                            }
+                            return;
+                        }
+                    }
+                }
+
                 let webview_id = match self.focused_webview_id {
                     Some(webview_id) => webview_id,
                     None => {
@@ -469,6 +515,39 @@ impl Window {
                         return;
                     }
                 };
+
+                // Handle native chrome mouse clicks
+                {
+                    let chrome_height = self.chrome.as_ref().map_or(0.0, |c| c.chrome_height(self.scale_factor() as f32));
+                    if point.y < chrome_height {
+                        let mouse_button = match button {
+                            winit::event::MouseButton::Left => MouseButton::Left,
+                            winit::event::MouseButton::Right => MouseButton::Right,
+                            winit::event::MouseButton::Middle => MouseButton::Middle,
+                            _ => MouseButton::Left,
+                        };
+
+                        let winit_state = *state;
+                        let (consumed, result) = if let Some(chrome) = &self.chrome {
+                            if winit_state == ElementState::Pressed {
+                                ChromeEventHandler::handle_mouse_down(chrome, point.x, point.y, mouse_button)
+                            } else {
+                                ChromeEventHandler::handle_mouse_up(chrome, point.x, point.y, mouse_button)
+                            }
+                        } else {
+                            (false, ChromeEventResult::None)
+                        };
+
+                        if consumed {
+                            let constellation_chan = compositor.constellation_chan.clone();
+                            if let Some(chrome_mut) = &mut self.chrome {
+                                ChromeEventHandler::execute_result(result, chrome_mut, &constellation_chan);
+                            }
+                            compositor.send_root_pipeline_display_list(self);
+                            return;
+                        }
+                    }
+                }
 
                 /* handle context menu */
                 if let (ElementState::Pressed, winit::event::MouseButton::Right) = (state, button) {
@@ -718,7 +797,15 @@ impl Window {
                 }
                 (modifiers, Code::KeyL) if modifiers == control_or_meta => {
                     // focus on navigation input
-                    if let Some(panel) = &self.panel {
+                    if let Some(chrome) = &mut self.chrome {
+                        // Native chrome: focus URL bar
+                        chrome.url_bar.focused = true;
+                        chrome.url_bar.cursor_pos = chrome.url_bar.text.len();
+                        chrome.url_bar.selection_start = Some(0);
+                        chrome.mark_dirty();
+                        compositor.send_root_pipeline_display_list(self);
+                    } else if let Some(panel) = &self.panel {
+                        // HTML panel: focus URL input via JavaScript
                         let webview_id = &panel.webview.webview_id;
 
                         let _ = compositor.constellation_chan.send(
@@ -899,10 +986,16 @@ impl Window {
     }
 
     /// Get the painting order of this window.
+    /// When native chrome is active, the panel is excluded from painting order
+    /// since the chrome is drawn natively by WebRender.
     pub fn painting_order(&self) -> Vec<&WebView> {
         let mut order = vec![];
-        if let Some(panel) = &self.panel {
-            order.push(&panel.webview);
+
+        // Only include the panel webview if native chrome is NOT active
+        if self.chrome.is_none() {
+            if let Some(panel) = &self.panel {
+                order.push(&panel.webview);
+            }
         }
 
         if let Some(tab) = self.tab_manager.current_tab() {

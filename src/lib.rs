@@ -44,3 +44,5 @@ pub(crate) mod storage;
 pub mod tab;
 /// Utilities
 pub(crate) mod utils;
+/// Native browser chrome (navigation bar, tab bar, URL bar)
+pub mod chrome;
