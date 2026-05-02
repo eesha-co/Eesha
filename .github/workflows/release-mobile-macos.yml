@@ -82,7 +82,8 @@ jobs:
           EOF
 
           # Build the Rust library for Android
-          cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib
+          # Disable jemalloc for Android cross-compilation (C compiler issues)
+          cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
 
       - name: Prepare APK native libs
         run: |
