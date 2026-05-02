@@ -178,6 +178,6 @@ harness = false
 inherits = "release"
 lto = true
 
-# Warn on unexpected cfgs to catch bugs like missing platform aliases
+# Declare expected cfgs from cfg_aliases in build.rs
 [lints.rust]
-unexpected_cfgs = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(windows)', 'cfg(linux)', 'cfg(macos)', 'cfg(ios)', 'cfg(android)', 'cfg(apple)'] }
