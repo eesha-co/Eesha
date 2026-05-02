@@ -208,15 +208,25 @@ impl ChromeState {
 
     /// Set loading state for a tab
     pub fn set_loading(&mut self, webview_id: WebViewId, loading: bool) {
-        if let Some(tab) = self.tabs.iter_mut().find(|t| t.webview_id == webview_id) {
-            tab.loading = loading;
+        // First, update the tab's loading state
+        let mut found_active = false;
+        for tab in &mut self.tabs {
+            if tab.webview_id == webview_id {
+                tab.loading = loading;
+                found_active = true;
+                break;
+            }
+        }
+        
+        // Check if this is the active tab and update nav state
+        if found_active {
             if let Some(active_tab) = self.tabs.get(self.active_tab_index) {
-                if tab.webview_id == active_tab.webview_id {
-                self.nav_state.loading = loading;
+                if active_tab.webview_id == webview_id {
+                    self.nav_state.loading = loading;
                 }
             }
-            self.mark_dirty();
         }
+        self.mark_dirty();
     }
 
     /// Get the active tab's WebView ID
