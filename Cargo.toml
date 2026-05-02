@@ -178,6 +178,6 @@ harness = false
 inherits = "release"
 lto = true
 
-# Tell clippy to allow e.g. #[cfg(macos)]
+# Warn on unexpected cfgs to catch bugs like missing platform aliases
 [lints.rust]
-unexpected_cfgs = "allow"
+unexpected_cfgs = "warn"

@@ -168,7 +168,7 @@ impl Default for ConfigFromController {
             visible: true,
             focused: true,
             decorated: false,
-            transparent: true,
+            transparent: false,
             title: None,
             icon: None,
             fullscreen: false,
