@@ -1,4 +1,13 @@
 fn main() {
+    // Declare expected cfg names so Cargo doesn't error when cfg_aliases emits them.
+    // Required since Rust 1.80+ which validates --cfg flags from build scripts.
+    println!("cargo:rustc-check-cfg=cfg(android)");
+    println!("cargo:rustc-check-cfg=cfg(macos)");
+    println!("cargo:rustc-check-cfg=cfg(ios)");
+    println!("cargo:rustc-check-cfg=cfg(windows)");
+    println!("cargo:rustc-check-cfg=cfg(apple)");
+    println!("cargo:rustc-check-cfg=cfg(linux)");
+
     cfg_aliases::cfg_aliases! {
         // Platforms
         android: { target_os = "android" },
