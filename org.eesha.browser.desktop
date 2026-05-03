@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Eesha
-StartupWMClass=eesha
-Comment=A modern web browser powered by Servo
-GenericName=Web Browser
-Type=Application
-Categories=Network
-Icon=org.eesha.browser
-Exec=eesha
