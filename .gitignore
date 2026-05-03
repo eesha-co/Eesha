@@ -17,8 +17,8 @@
 node_modules/
 .next/
 bun.lock
-package.json
-package-lock.json
+/package.json
+/package-lock.json
 
 # Electron build output
 desktop/dist/
