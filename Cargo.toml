@@ -152,7 +152,7 @@ webrender = { git = "https://github.com/servo/webrender", branch = "0.66", featu
 webrender_api = { git = "https://github.com/servo/webrender", branch = "0.66" }
 wr_malloc_size_of = { git = "https://github.com/servo/webrender", branch = "0.66" }
 # Packager feature
-cargo-packager-resource-resolver = { version = "0.2.0", features = [
+cargo-packager-resource-resolver = { version = "0.1.2", features = [
   "auto-detect-format",
 ], optional = true }
 chrono = "0.4.41"
