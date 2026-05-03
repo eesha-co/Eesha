@@ -266,6 +266,14 @@ jobs:
           # Set Android API level for OpenSSL vendored build
           export ANDROID_API=24
 
+          # jemalloc's configure script fails with Android NDK for some targets
+          # Create a jemalloc stub library similar to the iOS approach
+          mkdir -p /tmp/jemalloc-stub
+          printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
+          ${CC} -c -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
+          ${AR} rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
+          export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
+
           # Build the Rust library for Android
           # Use --no-default-features to disable bluetooth and background_hang_monitor
           # openssl-sys with vendored feature will build OpenSSL from source using the NDK
@@ -335,8 +343,6 @@ jobs:
         env:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
-          X11_NO_PKG_CONFIG: "1"
-          PKG_CONFIG_ALLOW_CROSS: "1"
         run: |
           # Determine the correct clang target and SDK for iOS
           if [ "${{ matrix.target }}" = "aarch64-apple-ios-sim" ]; then
@@ -459,8 +465,46 @@ jobs:
           Cflags: -I${includedir}
           PCEOF
 
-          export PKG_CONFIG_PATH=/tmp/x11-stub/pkgconfig
-          export PKG_CONFIG_SYSROOT_DIR=/tmp/x11-stub
+          # Create a custom pkg-config wrapper that returns our stub values
+          # This is needed because the system pkg-config on macOS doesn't support iOS cross-compilation
+          mkdir -p /tmp/x11-stub/bin
+          echo '#!/bin/bash' > /tmp/x11-stub/bin/pkg-config
+          echo 'case "$1" in' >> /tmp/x11-stub/bin/pkg-config
+          echo '  --libs)' >> /tmp/x11-stub/bin/pkg-config
+          echo '    case "$2" in' >> /tmp/x11-stub/bin/pkg-config
+          echo '      x11) echo "-L/tmp/x11-stub -lX11" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xext) echo "-L/tmp/x11-stub -lXext" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xcursor) echo "-L/tmp/x11-stub -lXcursor" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xi) echo "-L/tmp/x11-stub -lXi" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xrender) echo "-L/tmp/x11-stub -lXrender" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xrandr) echo "-L/tmp/x11-stub -lXrandr" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      gl) echo "-L/tmp/x11-stub -lGL" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      *) echo "-L/tmp/x11-stub" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '    esac ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '  --cflags)' >> /tmp/x11-stub/bin/pkg-config
+          echo '    echo "-I/tmp/x11-stub/include" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '  --exists)' >> /tmp/x11-stub/bin/pkg-config
+          echo '    exit 0 ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '  --modversion)' >> /tmp/x11-stub/bin/pkg-config
+          echo '    echo "1.0" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '  --libs-only-l)' >> /tmp/x11-stub/bin/pkg-config
+          echo '    case "$2" in' >> /tmp/x11-stub/bin/pkg-config
+          echo '      x11) echo "-lX11" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xext) echo "-lXext" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xcursor) echo "-lXcursor" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xi) echo "-lXi" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xrender) echo "-lXrender" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      xrandr) echo "-lXrandr" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      gl) echo "-lGL" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '      *) echo "" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '    esac ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '  --libs-only-L)' >> /tmp/x11-stub/bin/pkg-config
+          echo '    echo "-L/tmp/x11-stub" ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo '  *)' >> /tmp/x11-stub/bin/pkg-config
+          echo '    /usr/bin/pkg-config "$@" 2>/dev/null || true ;;' >> /tmp/x11-stub/bin/pkg-config
+          echo 'esac' >> /tmp/x11-stub/bin/pkg-config
+          chmod +x /tmp/x11-stub/bin/pkg-config
+          export PKG_CONFIG=/tmp/x11-stub/bin/pkg-config
 
           # Create X11 include headers for the Rust x11 crate
           mkdir -p /tmp/x11-stub/include/X11
