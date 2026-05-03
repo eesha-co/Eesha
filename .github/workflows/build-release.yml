@@ -243,28 +243,23 @@ jobs:
           RUSTC_WRAPPER: sccache
           OPENSSL_NO_VENDOR: "0"
         run: |
-          # Determine the correct NDK tool prefix
-          # NDK bin names: aarch64-linux-android24-clang, armv7-linux-androideabi24-clang, x86_64-linux-android24-clang
-          if [ "${{ matrix.target }}" = "armv7-linux-androideabi" ]; then
-            TOOL_PREFIX="armv7-linux-androideabi"
-          else
-            TOOL_PREFIX="${{ matrix.target }}"
-          fi
+          # Set up NDK toolchain using the generic clang with --target flag
+          # This works across all NDK versions and avoids issues with target-specific binary names
+          NDK_BIN="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          ANDROID_API=24
 
-          # Set up NDK toolchain for cargo
+          # Set up cargo linker config
           mkdir -p .cargo
           echo "[target.${{ matrix.target }}]" >> .cargo/config.toml
-          echo "linker = \"${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang\"" >> .cargo/config.toml
-          echo "ar = \"${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar\"" >> .cargo/config.toml
+          echo "linker = \"${NDK_BIN}/clang\"" >> .cargo/config.toml
+          echo "ar = \"${NDK_BIN}/llvm-ar\"" >> .cargo/config.toml
+          echo "rustflags = [\"-C\", \"link-arg=--target=${{ matrix.target }}${ANDROID_API}\"]" >> .cargo/config.toml
 
-          # Set CC/CXX for C/C++ dependencies (needed for vendored OpenSSL build)
-          export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang"
-          export CXX="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang++"
-          export AR="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-          export RANLIB="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib"
-
-          # Set Android API level for OpenSSL vendored build
-          export ANDROID_API=24
+          # Set CC/CXX for C/C++ dependencies using generic clang with target flag
+          export CC="${NDK_BIN}/clang --target=${{ matrix.target }}${ANDROID_API}"
+          export CXX="${NDK_BIN}/clang++ --target=${{ matrix.target }}${ANDROID_API}"
+          export AR="${NDK_BIN}/llvm-ar"
+          export RANLIB="${NDK_BIN}/llvm-ranlib"
 
           # Set sysroot and include paths for bindgen (needed by aws-lc-sys / rustls)
           NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
