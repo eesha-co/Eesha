@@ -271,10 +271,11 @@ jobs:
           export CFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24 --sysroot=${NDK_SYSROOT}"
           export CXXFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24 --sysroot=${NDK_SYSROOT}"
           export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${TOOL_PREFIX}"
-          # Set target-specific CC/CXX env vars for cargo
-          export CC_${{ matrix.target }}="${CC}"
-          export CXX_${{ matrix.target }}="${CXX}"
-          export AR_${{ matrix.target }}="${AR}"
+          # Set target-specific CC/CXX env vars for cargo (convert hyphens to underscores)
+          CARGO_TARGET=$(echo "${{ matrix.target }}" | tr '-' '_')
+          export CC_${CARGO_TARGET}="${CC}"
+          export CXX_${CARGO_TARGET}="${CXX}"
+          export AR_${CARGO_TARGET}="${AR}"
 
           # Create stub libraries for pkg-config-dependent crates
           # fontconfig, freetype2, expat are needed by yeslogic-fontconfig-sys
