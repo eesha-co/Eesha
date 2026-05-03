@@ -155,9 +155,10 @@ jobs:
         env:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
-          PATH: "/Library/Frameworks/GStreamer.framework/Versions/1.0/bin:${PATH}"
-          DYLD_LIBRARY_PATH: "/Library/Frameworks/GStreamer.framework/Versions/1.0/lib"
-        run: cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release
+        run: |
+          export PATH="/Library/Frameworks/GStreamer.framework/Versions/1.0/bin:$PATH"
+          export DYLD_LIBRARY_PATH="/Library/Frameworks/GStreamer.framework/Versions/1.0/lib"
+          cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release
 
       - name: Make archive
         run: |
