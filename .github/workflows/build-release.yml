@@ -252,11 +252,9 @@ jobs:
 
           # Set up NDK toolchain for cargo
           mkdir -p .cargo
-          cat >> .cargo/config.toml <<EOF
-[target.${{ matrix.target }}]
-linker = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang"
-ar = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-EOF
+          echo "[target.${{ matrix.target }}]" >> .cargo/config.toml
+          echo "linker = \"${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang\"" >> .cargo/config.toml
+          echo "ar = \"${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar\"" >> .cargo/config.toml
 
           # Set CC/CXX for C/C++ dependencies
           export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang"
