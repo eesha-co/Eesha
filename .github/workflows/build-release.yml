@@ -243,29 +243,50 @@ jobs:
           RUSTC_WRAPPER: sccache
           OPENSSL_NO_VENDOR: "0"
         run: |
-          # Set up NDK toolchain using the generic clang with --target flag
-          # This works across all NDK versions and avoids issues with target-specific binary names
+          # Determine the correct NDK tool prefix for target-specific binaries
+          # NDK r28b uses: aarch64-linux-android21-clang, armv7-linux-androideabi21-clang, x86_64-linux-android21-clang
+          if [ "${{ matrix.target }}" = "armv7-linux-androideabi" ]; then
+            TOOL_PREFIX="armv7-linux-androideabi"
+          else
+            TOOL_PREFIX="${{ matrix.target }}"
+          fi
           NDK_BIN="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          ANDROID_API=24
+          NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+          ANDROID_API=21
 
-          # Set up cargo linker config
+          # Find the correct clang binary (try API-specific first, then fall back)
+          if [ -f "${NDK_BIN}/${TOOL_PREFIX}${ANDROID_API}-clang" ]; then
+            CLANG_BIN="${NDK_BIN}/${TOOL_PREFIX}${ANDROID_API}-clang"
+            CLANGXX_BIN="${NDK_BIN}/${TOOL_PREFIX}${ANDROID_API}-clang++"
+          else
+            CLANG_BIN="${NDK_BIN}/${TOOL_PREFIX}24-clang"
+            CLANGXX_BIN="${NDK_BIN}/${TOOL_PREFIX}24-clang++"
+          fi
+
+          # Set up cargo linker config using target-specific binary
           mkdir -p .cargo
           echo "[target.${{ matrix.target }}]" >> .cargo/config.toml
-          echo "linker = \"${NDK_BIN}/clang\"" >> .cargo/config.toml
+          echo "linker = \"${CLANG_BIN}\"" >> .cargo/config.toml
           echo "ar = \"${NDK_BIN}/llvm-ar\"" >> .cargo/config.toml
-          echo "rustflags = [\"-C\", \"link-arg=--target=${{ matrix.target }}${ANDROID_API}\"]" >> .cargo/config.toml
 
-          # Set CC/CXX for C/C++ dependencies using generic clang with target flag
-          export CC="${NDK_BIN}/clang --target=${{ matrix.target }}${ANDROID_API}"
-          export CXX="${NDK_BIN}/clang++ --target=${{ matrix.target }}${ANDROID_API}"
+          # Set CC/CXX for C/C++ dependencies
+          export CC="${CLANG_BIN}"
+          export CXX="${CLANGXX_BIN}"
           export AR="${NDK_BIN}/llvm-ar"
           export RANLIB="${NDK_BIN}/llvm-ranlib"
 
+          # Set cmake variables for Android (needed by aws-lc-sys)
+          export CMAKE_SYSTEM_NAME=Android
+          export CMAKE_SYSTEM_VERSION=${ANDROID_API}
+          export CMAKE_ANDROID_ARCH_ABI=${{ matrix.abi }}
+          export CMAKE_ANDROID_NDK="${ANDROID_NDK_ROOT}"
+          export CMAKE_SYSROOT="${NDK_SYSROOT}"
+
           # Set sysroot and include paths for bindgen (needed by aws-lc-sys / rustls)
           NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-          export CFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24 --sysroot=${NDK_SYSROOT}"
-          export CXXFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24 --sysroot=${NDK_SYSROOT}"
-          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${TOOL_PREFIX}"
+          export CFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
+          export CXXFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
+          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${TOOL_PREFIX} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
           # Set target-specific CC/CXX env vars for cargo (convert hyphens to underscores)
           CARGO_TARGET=$(echo "${{ matrix.target }}" | tr '-' '_')
           export CC_${CARGO_TARGET}="${CC}"
