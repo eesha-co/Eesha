@@ -191,10 +191,13 @@ jobs:
         include:
           - target: aarch64-linux-android
             abi: arm64-v8a
+            ndk_llvm_target: aarch64-linux-android
           - target: armv7-linux-androideabi
             abi: armeabi-v7a
+            ndk_llvm_target: armv7-linux-androideabi
           - target: x86_64-linux-android
             abi: x86_64
+            ndk_llvm_target: x86_64-linux-android
     steps:
       - uses: actions/checkout@v4
 
@@ -243,24 +246,37 @@ jobs:
           RUSTC_WRAPPER: sccache
           OPENSSL_NO_VENDOR: "0"
         run: |
-          # Determine the correct NDK tool prefix
-          if [ "${{ matrix.target }}" = "armv7-linux-androideabi" ]; then
-            TOOL_PREFIX="armv7-linux-androideabi"
-          else
-            TOOL_PREFIX="${{ matrix.target }}"
-          fi
           NDK_BIN="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
           ANDROID_API=21
+          NDK_LLVM_TARGET="${{ matrix.ndk_llvm_target }}"
 
-          # Find available clang binary for this target
-          CLANG_BIN=$(ls ${NDK_BIN}/${TOOL_PREFIX}*clang 2>/dev/null | head -1 || true)
+          # Find the clang binary for this target.
+          # NDK r28b may not have target-specific symlinks for all architectures.
+          # Strategy: 1) Try target-specific binary, 2) Fall back to generic clang
+          CLANG_BIN=$(ls ${NDK_BIN}/${NDK_LLVM_TARGET}${ANDROID_API}-clang 2>/dev/null || true)
           if [ -z "${CLANG_BIN}" ]; then
-            echo "ERROR: No clang binary found for ${TOOL_PREFIX}"
-            ls -la ${NDK_BIN}/ | head -30
-            exit 1
+            # Try any API level for this target
+            CLANG_BIN=$(ls ${NDK_BIN}/${NDK_LLVM_TARGET}*-clang 2>/dev/null | head -1 || true)
           fi
+          if [ -z "${CLANG_BIN}" ]; then
+            # Fall back to the generic NDK clang with --target flag
+            echo "No target-specific clang found for ${NDK_LLVM_TARGET}, using generic clang"
+            CLANG_BIN="${NDK_BIN}/clang"
+            # We'll pass --target via CFLAGS
+            EXTRA_CC_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
+            EXTRA_CXX_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
+          else
+            EXTRA_CC_FLAGS=""
+            EXTRA_CXX_FLAGS=""
+          fi
+          echo "Using clang: ${CLANG_BIN}"
+          ${CLANG_BIN} --version | head -1
           CLANGXX_BIN="${CLANG_BIN%clang}clang++"
+          if [ ! -f "${CLANGXX_BIN}" ]; then
+            CLANGXX_BIN="${NDK_BIN}/clang++"
+            EXTRA_CXX_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
+          fi
 
           # Set up cargo linker config
           mkdir -p .cargo
@@ -268,7 +284,7 @@ jobs:
           echo "linker = \"${CLANG_BIN}\"" >> .cargo/config.toml
           echo "ar = \"${NDK_BIN}/llvm-ar\"" >> .cargo/config.toml
 
-          # CRITICAL FIX: Only use TARGET-SPECIFIC env vars for CC/CXX/AR.
+          # CRITICAL: Only use TARGET-SPECIFIC env vars for CC/CXX/AR.
           # Do NOT set global CC/CXX as this breaks HOST C compilation
           # (e.g., glslopt's build script compiles C for the HOST, and
           # global CC would make it use the Android cross-compiler instead).
@@ -279,25 +295,24 @@ jobs:
           export "RANLIB_${CARGO_TARGET}"="${NDK_BIN}/llvm-ranlib"
 
           # Set target-specific CFLAGS/CXXFLAGS (not global!)
-          export "CFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
-          export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
-          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${TOOL_PREFIX} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
+          export "CFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${EXTRA_CC_FLAGS}"
+          export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${EXTRA_CXX_FLAGS}"
+          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${NDK_LLVM_TARGET} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
 
           # Use NDK cmake toolchain file for Android cmake builds (aws-lc-sys)
           export CMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
           export CMAKE_ARGS="-DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-${ANDROID_API} -DANDROID_NDK=${ANDROID_NDK_ROOT}"
 
           # Create stub libraries for pkg-config-dependent crates
-          # Use NDK compiler directly (not $CC which isn't set globally)
           mkdir -p /tmp/android-stubs
           echo 'void FcInit() {} void FcFini() {} void FcGetVersion() {} void FcConfigGetCurrent() {} void FcConfigAppFontAddFile() {} void FcConfigAppFontAddDir() {} void FcConfigSubstitute() {} void FcDefaultSubstitute() {} void FcFontMatch() {} void FcFontSort() {} void FcPatternCreate() {} void FcPatternDestroy() {} void FcPatternAddString() {} void FcPatternAddInteger() {} void FcPatternAddDouble() {} void FcPatternAddBool() {} void FcPatternGetString() {} void FcPatternGetInteger() {} void FcPatternGetDouble() {} void FcPatternGetBool() {} void FcFontSetCreate() {} void FcFontSetDestroy() {} void FcFontSetAdd() {} void FcObjectSetCreate() {} void FcObjectSetAdd() {} void FcObjectSetDestroy() {} void FcFontList() {} void FcNameParse() {} void FcNameUnparse() {} void FcStrFree() {} void FcStrSetCreate() {} void FcStrSetDestroy() {} void FcStrSetAdd() {} void FcStrSetAddFilename() {} void FcStrListCreate() {} void FcStrListNext() {} void FcStrListDone() {} void FcConfigParseAndLoad() {} void FcConfigBuildFonts() {} void FcInitReinitialize() {} void FcInitBringUptoDate() {} void FcGetResult() {} void FcPatternFormat() {} void FcPatternDuplicate() {} void FcPatternFilter() {} void FcPatternReference() {} void FcValueDestroy() {} void FcValueSave() {} void FcCharSetCreate() {} void FcCharSetDestroy() {} void FcCharSetAddChar() {} void FcCharSetHasChar() {} void FcCharSetCount() {} void FcCharSetIntersect() {} void FcCharSetUnion() {} void FcCharSetSubtract() {} void FcLangSetCreate() {} void FcLangSetDestroy() {} void FcLangSetAdd() {} void FcLangSetHasLang() {} void FcConfigGetFonts() {} void FcConfigGetConfigDirs() {} void FcConfigGetFontDirs() {} void FcConfigGetRescanInterval() {} void FcConfigSetRescanInterval() {} void FcConfigGetConfigFiles() {} void FcConfigGetCacheDirs() {} void FcConfigHomeDir() {} void FcConfigEnableHome() {} void FcConfigFilename() {} void FcConfigAppFontClear() {}' > /tmp/android-stubs/fontconfig.c
-          ${CLANG_BIN} -c -o /tmp/android-stubs/fontconfig.o /tmp/android-stubs/fontconfig.c
+          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/android-stubs/fontconfig.o /tmp/android-stubs/fontconfig.c
           ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libfontconfig.a /tmp/android-stubs/fontconfig.o
           echo 'void FT_Init_FreeType() {} void FT_Done_FreeType() {} void FT_New_Face() {} void FT_Done_Face() {} void FT_New_Memory_Face() {} void FT_Open_Face() {} void FT_Attach_File() {} void FT_Attach_Stream() {} void FT_Reference_Face() {} void FT_Set_Char_Size() {} void FT_Set_Pixel_Sizes() {} void FT_Load_Glyph() {} void FT_Load_Char() {} void FT_Render_Glyph() {} void FT_Get_Kerning() {} void FT_Get_Track_Kerning() {} void FT_Get_Glyph_Name() {} void FT_Get_Postscript_Name() {} void FT_Select_Charmap() {} void FT_Set_Charmap() {} void FT_Get_Charmap_Index() {} void FT_Get_CMap_Language_ID() {} void FT_Get_CMap_Format() {} void FT_Get_First_Char() {} void FT_Get_Next_Char() {} void FT_Get_Name_Index() {} void FT_Set_Transform() {} void FT_Get_Transform() {} void FT_Glyph_Copy() {} void FT_Get_Advance() {} void FT_Library_Version() {} void FT_Face_CheckTrueTypePatents() {} void FT_Face_SetUnpatentedHinting() {}' > /tmp/android-stubs/freetype.c
-          ${CLANG_BIN} -c -o /tmp/android-stubs/freetype.o /tmp/android-stubs/freetype.c
+          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/android-stubs/freetype.o /tmp/android-stubs/freetype.c
           ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libfreetype.a /tmp/android-stubs/freetype.o
           echo 'void XML_ParserCreate() {} void XML_ParserCreateNS() {} void XML_ParserCreate_MM() {} void XML_ParserFree() {} void XML_Parse() {} void XML_SetElementHandler() {} void XML_SetCharacterDataHandler() {} void XML_SetProcessingInstructionHandler() {} void XML_SetCommentHandler() {} void XML_SetStartCdataSectionHandler() {} void XML_SetEndCdataSectionHandler() {} void XML_SetDefaultHandler() {} void XML_SetDefaultHandlerExpand() {} void XML_SetUnparsedEntityDeclHandler() {} void XML_SetNotationDeclHandler() {} void XML_SetNamespaceDeclHandler() {} void XML_SetStartNamespaceDeclHandler() {} void XML_SetEndNamespaceDeclHandler() {} void XML_SetXmlDeclHandler() {} void XML_SetAttlistDeclHandler() {} void XML_SetEntityDeclHandler() {} void XML_SetDoctypeDeclHandler() {} void XML_SetElementDeclHandler() {} void XML_SetUserData() {} void XML_GetUserData() {} void XML_SetEncoding() {} void XML_UseForeignDTD() {} void XML_SetReturnNSTriplet() {} void XML_GetErrorCode() {} void XML_ErrorString() {} void XML_GetCurrentLineNumber() {} void XML_GetCurrentColumnNumber() {} void XML_GetCurrentByteIndex() {} void XML_GetCurrentByteCount() {} void XML_GetInputContext() {} void XML_SetBase() {} void XML_GetBase() {}' > /tmp/android-stubs/expat.c
-          ${CLANG_BIN} -c -o /tmp/android-stubs/expat.o /tmp/android-stubs/expat.c
+          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/android-stubs/expat.o /tmp/android-stubs/expat.c
           ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libexpat.a /tmp/android-stubs/expat.o
 
           # Custom pkg-config wrapper for Android cross-compilation
@@ -360,7 +375,7 @@ jobs:
           # jemalloc stub for Android
           mkdir -p /tmp/jemalloc-stub
           printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
-          ${CLANG_BIN} -c -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
+          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
           ${NDK_BIN}/llvm-ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
@@ -433,7 +448,6 @@ jobs:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
         run: |
-          # Determine the correct clang target and SDK for iOS
           if [ "${{ matrix.target }}" = "aarch64-apple-ios-sim" ]; then
             CLANG_TARGET="arm64-apple-ios14.0-simulator"
             SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
@@ -442,21 +456,18 @@ jobs:
             SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           fi
 
-          # jemalloc doesn't support iOS - provide a stub via JEMALLOC_OVERRIDE
+          # jemalloc doesn't support iOS - provide a stub
           mkdir -p /tmp/jemalloc-stub
           printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
           clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
           ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
-          # Set up iOS link flags
           export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
           export CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
 
           # NOTE: surfman (Servo's GPU surface management library) does not natively
           # support iOS. This build will likely fail at the surfman compilation step.
-          # A proper iOS build requires patching surfman or implementing an iOS-specific
-          # rendering backend. This is tracked as a known issue.
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
       - name: Make archive
