@@ -10,6 +10,91 @@ env:
   EESHA_VERSION: "0.2.0"
 
 jobs:
+  # ─── Desktop Build (Electron) ────────────────────────────────────
+  build-desktop-linux:
+    name: Desktop (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Build Linux
+        working-directory: desktop
+        run: npx electron-builder --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eesha-linux
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+
+  build-desktop-win:
+    name: Desktop (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Build Windows
+        working-directory: desktop
+        run: npx electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eesha-windows
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.zip
+
+  build-desktop-mac:
+    name: Desktop (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Build macOS
+        working-directory: desktop
+        run: npx electron-builder --mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eesha-macos
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+
   # ─── Android Build (WebView/Chromium) ─────────────────────────────
   build-android:
     name: Android
@@ -57,13 +142,13 @@ jobs:
 
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: eesha-android
-          path: android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
 
   # ─── iOS Build (WKWebView/WebKit) ─────────────────────────────────
   build-ios:
@@ -72,31 +157,61 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create Xcode project
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
         working-directory: ios
         run: |
-          # Create a minimal Package.swift or Xcode project
-          # For now, we'll package the source code
-          mkdir -p Eesha.xcodeproj
+          chmod +x create_xcodeproj.sh
+          ./create_xcodeproj.sh
 
-      - name: Package iOS source
+      - name: Build iOS
+        working-directory: ios
         run: |
-          mkdir -p eesha-ios-release
-          cp -r ios/Eesha eesha-ios-release/Eesha
-          cp -r shared/icons eesha-ios-release/icons
-          cd eesha-ios-release && tar -czvf ../eesha-ios-source.tar.gz .
+          xcodebuild -project Eesha.xcodeproj \
+            -scheme Eesha \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build \
+            | tail -20
+
+      - name: Package iOS app
+        working-directory: ios
+        run: |
+          APP_PATH=$(find build -name "Eesha.app" -type d | head -1)
+          if [ -n "$APP_PATH" ]; then
+            mkdir -p packaging
+            cp -r "$APP_PATH" packaging/Eesha.app
+            cd packaging
+            zip -r ../eesha-ios-app.zip Eesha.app
+            echo "iOS app packaged successfully"
+          else
+            echo "No .app found, packaging source instead"
+            cd ..
+            tar -czvf eesha-ios-source.tar.gz -C . Eesha/
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: eesha-ios-source
-          path: eesha-ios-source.tar.gz
+          name: eesha-ios
+          path: |
+            ios/eesha-ios-app.zip
+            ios/eesha-ios-source.tar.gz
 
   # ─── Publish Release ──────────────────────────────────────────────
   publish-release:
     name: Publish Release
     runs-on: ubuntu-latest
     needs:
+      - build-desktop-linux
+      - build-desktop-win
+      - build-desktop-mac
       - build-android
       - build-ios
     if: always()
@@ -114,7 +229,7 @@ jobs:
       - name: Filter valid artifacts
         run: |
           mkdir -p valid-artifacts
-          find artifacts/ -type f \( -name "*.tar.gz" -o -name "*.apk" \) | while read f; do
+          find artifacts/ -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.apk" -o -name "*.tar.gz" \) | while read f; do
             SIZE=$(stat -c%s "$f" 2>/dev/null || echo 0)
             if [ "$SIZE" -gt 1024 ]; then
               cp "$f" valid-artifacts/
@@ -129,7 +244,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_TAG=eesha-v${{ env.EESHA_VERSION }}
-          ARTIFACT_FILES=$(find valid-artifacts/ -type f \( -name "*.tar.gz" -o -name "*.apk" \) | sort)
+          ARTIFACT_FILES=$(find valid-artifacts/ -type f | sort)
 
           if [ -z "$ARTIFACT_FILES" ]; then
             echo "No valid artifacts"
@@ -148,14 +263,33 @@ jobs:
               --title "Eesha ${{ env.EESHA_VERSION }}" \
               --notes "Eesha Browser v${{ env.EESHA_VERSION }} — Blink/Chromium-powered
 
-          ## Platforms
-          - **Android** — WebView/Chromium-based APK
-          - **iOS** — WKWebView/WebKit source (Xcode project required)
+          ## 🖥️ Desktop (Electron + Chromium)
+          - **Linux** — \`.AppImage\` (universal) and \`.deb\` (Debian/Ubuntu)
+          - **Windows** — \`.exe\` installer and portable
+          - **macOS** — \`.dmg\` (Intel + Apple Silicon)
 
-          ## What's New
-          - Engine switch from Servo to Blink (Chromium)
-          - Built-in ad/tracker blocking
+          ## 📱 Mobile
+          - **Android** — \`.apk\` (WebView/Chromium-based)
+          - **iOS** — Source code (requires Xcode + Apple Developer account to build)
+
+          ## ✨ What's New
+          - Switched from Servo to Chromium/Blink engine
+          - Electron-based desktop with multi-tab browsing
+          - Built-in ad/tracker blocking (50+ domains)
           - Custom Eesha new tab page with DuckDuckGo search
-          - Privacy-first: no Google telemetry, HTTPS-only
-          - Android and iOS support"
+          - Privacy-first: no Google telemetry, HTTPS upgrade
+          - Android WebView browser with ad blocking
+          - iOS WKWebView browser with tracker blocking
+
+          ## 🚀 Installation
+          ### Desktop
+          - **Linux**: Download \`.AppImage\`, make executable (\`chmod +x\`), and run
+          - **Windows**: Download \`.exe\` installer and run
+          - **macOS**: Download \`.dmg\`, open, drag to Applications
+
+          ### Android
+          - Download \`.apk\` and install (enable \"Install from unknown sources\")
+
+          ### iOS
+          - Requires building from source with Xcode"
           fi

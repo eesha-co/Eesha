@@ -20,6 +20,9 @@ bun.lock
 package.json
 package-lock.json
 
+# Electron build output
+desktop/dist/
+
 # IDE
 .idea/
 .vscode/
@@ -52,3 +55,15 @@ dev.log
 local-*
 TODO
 worklog.md
+
+# iOS build
+ios/build/
+ios/Eesha.xcodeproj/
+
+# Android build
+android/app/build/
+android/.gradle/
+android/build/
+
+# CEF legacy
+desktop-cef-legacy/
