@@ -47,6 +47,7 @@ use webrender_api::{
 use winit::window::WindowId;
 
 use crate::rendering::RenderingContext;
+use crate::chrome::ChromePainter;
 use crate::touch::{TouchAction, TouchHandler};
 use crate::window::Window;
 
@@ -987,25 +988,20 @@ impl IOCompositor {
 
         let root_clip_id = builder.define_clip_rect(zoom_reference_frame, viewport_rect);
         let root_clip_chain_id = builder.define_clip_chain(None, [root_clip_id]);
-        // Only decorate the webviews if we're in the browser mode (panel or native chrome)
-        let should_decorate = window.has_chrome();
 
-        // Render native chrome display list before content iframes
-        if let Some(chrome) = &window.native_chrome {
-            chrome.build_display_list(
-                &mut builder,
-                root_pipeline,
-                viewport_rect.size.width,
-                zoom_factor,
-                zoom_reference_frame,
-            );
-        }
+        // Determine if we're using native chrome or HTML panel
+        let use_native_chrome = window.chrome.is_some();
+
+        // Only decorate the webviews if we're in the browser mode
+        let should_decorate = use_native_chrome || window.panel.is_some();
 
         for webview in window.painting_order() {
             if let Some(pipeline_id) = self.webviews.get(&webview.webview_id) {
                 let scaled_webview_rect =
                     LayoutRect::from_untyped(&(webview.rect.to_f32() / zoom_factor).to_untyped());
-                let root_space_and_clip = if should_decorate {
+
+                // With native chrome, webviews don't need rounded corners or shadows
+                let root_space_and_clip = if should_decorate && !use_native_chrome {
                     let complex = ComplexClipRegion::new(
                         scaled_webview_rect,
                         BorderRadius::uniform(10.), // TODO: add fields to webview
@@ -1033,7 +1029,8 @@ impl IOCompositor {
                     true,
                 );
 
-                if should_decorate {
+                // Only draw shadow decoration for HTML panel mode, not native chrome
+                if should_decorate && !use_native_chrome {
                     let root_space = SpaceAndClipInfo {
                         spatial_id: zoom_reference_frame,
                         clip_chain_id: root_clip_chain_id,
@@ -1055,6 +1052,44 @@ impl IOCompositor {
                         box_shadow_type,
                     );
                 }
+            }
+        }
+
+        // Paint native chrome if active
+        if use_native_chrome {
+            if let Some(chrome) = &window.chrome {
+                // Push a reference frame for the chrome that is NOT affected by zoom
+                // The chrome should always be at 1:1 scale
+                let chrome_reference_frame = builder.push_reference_frame(
+                    LayoutPoint::zero(),
+                    SpatialId::root_reference_frame(root_pipeline),
+                    TransformStyle::Flat,
+                    PropertyBinding::Value(Transform3D::identity()),
+                    ReferenceFrameKind::Transform {
+                        is_2d_scale_translation: true,
+                        should_snap: true,
+                        paired_with_perspective: false,
+                    },
+                    SpatialTreeItemKey::new(1, 0),
+                );
+
+                let chrome_viewport_size = LayoutSize::from_untyped(viewport_size);
+                let chrome_clip_id = builder.define_clip_rect(
+                    chrome_reference_frame,
+                    LayoutRect::from_origin_and_size(LayoutPoint::zero(), chrome_viewport_size),
+                );
+                let chrome_clip_chain_id = builder.define_clip_chain(None, [chrome_clip_id]);
+
+                ChromePainter::paint(
+                    chrome,
+                    &mut builder,
+                    chrome_reference_frame,
+                    chrome_clip_chain_id,
+                    chrome_viewport_size,
+                    window.scale_factor() as f32,
+                );
+
+                builder.pop_reference_frame();
             }
         }
 

@@ -81,6 +81,13 @@ jobs:
           ar = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
           EOF
 
+          # Set CC/CXX for jemalloc and other C/C++ dependencies
+          export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang"
+          export CXX="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang++"
+          export AR="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          export CFLAGS="-D__ANDROID_API__=24"
+          export CXXFLAGS="-D__ANDROID_API__=24"
+
           # Build the Rust library for Android
           # Disable jemalloc for Android cross-compilation (C compiler issues)
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features

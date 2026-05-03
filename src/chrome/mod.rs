@@ -1,30 +1,35 @@
 //! Native Chrome Module
 //!
-//! This module implements the browser's UI chrome (toolbar, tabs, address bar)
-//! using native WebRender display list primitives instead of HTML-based rendering.
+//! This module implements the browser chrome (navigation bar, tab bar, URL bar)
+//! using native WebRender display lists instead of HTML-based UI.
 //!
-//! ## Architecture
-//!
-//! The native chrome is rendered directly into WebRender's display list alongside
-//! content WebViews. This eliminates the need for an HTML-based panel WebView and
-//! the insecure `window.prompt()` message bus that was previously used for
-//! communication between the browser chrome and the Rust backend.
-//!
-//! ## Security Benefits
-//!
-//! - **No JavaScript execution in chrome**: The native chrome is pure Rust, making
-//!   it immune to XSS attacks that could compromise the browser UI.
-//! - **No prompt() message bus**: Eliminates string injection vectors.
-//! - **No navigation in chrome**: The HTML panel had to explicitly block navigation;
-//!   native chrome has no concept of navigation.
-//! - **Input isolation**: Chrome hit-testing is separate from content hit-testing.
+//! This provides:
+//! - Better performance (no HTML rendering overhead for chrome)
+//! - Better security (no web content in chrome context)
+//! - Native look and feel
+//! - Direct event handling without JavaScript bridge
 
-pub mod native_chrome;
-pub mod theme;
-pub mod widgets;
-pub mod url_input;
-pub mod icons;
-pub mod keyboard;
+mod state;
+mod painter;
+mod event;
+mod widget;
+mod theme;
 
-pub use native_chrome::{NativeChrome, ChromeAction, ChromeElementId, ChromeFocusTarget};
+pub use state::{ChromeState, NavigationState, TabInfo};
+pub use painter::ChromePainter;
+pub use event::{ChromeEventHandler, ChromeEventResult};
+pub use widget::{WidgetId, WidgetKind, WidgetRect};
 pub use theme::ChromeTheme;
+
+/// Height of the tab bar in logical pixels
+pub const TAB_BAR_HEIGHT: f32 = 34.0;
+/// Height of the navigation bar in logical pixels
+pub const NAV_BAR_HEIGHT: f32 = 44.0;
+/// Height of the bookmark bar in logical pixels
+pub const BOOKMARK_BAR_HEIGHT: f32 = 28.0;
+/// Total chrome height (tab bar + nav bar)
+pub const CHROME_HEIGHT: f32 = TAB_BAR_HEIGHT + NAV_BAR_HEIGHT;
+/// Padding around widgets
+pub const CHROME_PADDING: f32 = 4.0;
+/// Spacing between widgets
+pub const WIDGET_SPACING: f32 = 6.0;
