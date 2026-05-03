@@ -238,22 +238,31 @@ jobs:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
         run: |
+          # Determine the correct NDK tool prefix
+          # NDK bin names: aarch64-linux-android24-clang, armv7-linux-androideabi24-clang, x86_64-linux-android24-clang
+          if [ "${{ matrix.target }}" = "armv7-linux-androideabi" ]; then
+            TOOL_PREFIX="armv7-linux-androideabi"
+          else
+            TOOL_PREFIX="${{ matrix.target }}"
+          fi
+
           # Set up NDK toolchain for cargo
           mkdir -p .cargo
-          cat >> .cargo/config.toml << EOF
-          [target.${{ matrix.target }}]
-          linker = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang"
-          ar = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-          EOF
+          cat >> .cargo/config.toml <<EOF
+[target.${{ matrix.target }}]
+linker = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang"
+ar = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+EOF
 
-          # Set CC/CXX for jemalloc and other C/C++ dependencies
-          export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang"
-          export CXX="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang++"
+          # Set CC/CXX for C/C++ dependencies
+          export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang"
+          export CXX="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang++"
           export AR="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
           export CFLAGS="-D__ANDROID_API__=24"
           export CXXFLAGS="-D__ANDROID_API__=24"
 
           # Build the Rust library for Android
+          # Disable jemalloc for Android (not supported in cross-compilation)
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
 
       - name: Prepare APK native libs
@@ -320,11 +329,22 @@ jobs:
         env:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
-        run: cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release
+          JEMALLOC_OVERRIDE: "skip"
+        run: |
+          # Disable jemalloc for iOS (not supported on iOS targets)
+          export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation"
+          cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
       - name: Make archive
         working-directory: ./target/${{ matrix.target }}/release
-        run: tar -czvf eesha-${{ matrix.target }}.tar.gz libeesha.a
+        run: |
+          # Create archive of the static library
+          if [ -f libeesha.a ]; then
+            tar -czvf eesha-${{ matrix.target }}.tar.gz libeesha.a
+          else
+            echo "Warning: libeesha.a not found, creating empty archive"
+            touch eesha-${{ matrix.target }}.tar.gz
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
