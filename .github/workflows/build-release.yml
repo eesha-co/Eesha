@@ -95,7 +95,7 @@ jobs:
           scoop install cmake
 
       - name: Upgrade LLVM
-        run: chko upgrade llvm -y
+        run: choco upgrade llvm -y
 
       - name: Build
         env:
@@ -266,19 +266,18 @@ jobs:
           if [ -z "${CLANG_BIN}" ]; then
             echo "No target-specific clang found for ${NDK_LLVM_TARGET}, using generic clang"
             CLANG_BIN="${NDK_BIN}/clang"
-            EXTRA_CC_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
-            EXTRA_CXX_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
-          else
-            EXTRA_CC_FLAGS=""
-            EXTRA_CXX_FLAGS=""
           fi
           echo "Using clang: ${CLANG_BIN}"
           ${CLANG_BIN} --version | head -1
           CLANGXX_BIN="${CLANG_BIN%clang}clang++"
           if [ ! -f "${CLANGXX_BIN}" ]; then
             CLANGXX_BIN="${NDK_BIN}/clang++"
-            EXTRA_CXX_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
           fi
+
+          # ALWAYS add --target flag to ensure correct cross-compilation target.
+          # The cc crate may add --target=<host> which is wrong for cross-compilation.
+          # Adding it at the end of CFLAGS ensures it takes precedence (Clang uses the last --target).
+          CLANG_TARGET_FLAG="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
 
           # Set up cargo linker config
           mkdir -p .cargo
@@ -294,25 +293,36 @@ jobs:
           export "AR_${CARGO_TARGET}"="${NDK_BIN}/llvm-ar"
           export "RANLIB_${CARGO_TARGET}"="${NDK_BIN}/llvm-ranlib"
 
-          # Set target-specific CFLAGS/CXXFLAGS (not global!)
-          export "CFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${EXTRA_CC_FLAGS}"
-          export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${EXTRA_CXX_FLAGS}"
+          # Set target-specific CFLAGS/CXXFLAGS with --target flag LAST so it overrides
+          # any incorrect --target=<host> that the cc crate might add.
+          export "CFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${CLANG_TARGET_FLAG}"
+          export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${CLANG_TARGET_FLAG}"
           export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${NDK_LLVM_TARGET} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
 
-          # Use NDK cmake toolchain file for cmake builds (aws-lc-sys)
-          export CMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
-          export "CMAKE_TOOLCHAIN_FILE_${CARGO_TARGET}"="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
+          # Create a custom cmake toolchain wrapper that forces ANDROID_ABI and ANDROID_PLATFORM
+          # The NDK cmake toolchain may not correctly read ANDROID_ABI from environment.
+          mkdir -p /tmp/cmake-toolchain
+          cat > /tmp/cmake-toolchain/android-toolchain.cmake << 'TCEOF'
+          set(ANDROID_ABI "$ENV{ANDROID_ABI}")
+          set(ANDROID_PLATFORM "$ENV{ANDROID_PLATFORM}")
+          if(NOT ANDROID_PLATFORM)
+            set(ANDROID_PLATFORM "android-21")
+          endif()
+          include("$ENV{ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake")
+          TCEOF
+          export CMAKE_TOOLCHAIN_FILE="/tmp/cmake-toolchain/android-toolchain.cmake"
+          export "CMAKE_TOOLCHAIN_FILE_${CARGO_TARGET}"="/tmp/cmake-toolchain/android-toolchain.cmake"
 
           # Create stub libraries for pkg-config-dependent crates
           mkdir -p /tmp/android-stubs
           echo 'void FcInit() {} void FcFini() {} void FcGetVersion() {} void FcConfigGetCurrent() {} void FcConfigAppFontAddFile() {} void FcConfigAppFontAddDir() {} void FcConfigSubstitute() {} void FcDefaultSubstitute() {} void FcFontMatch() {} void FcFontSort() {} void FcPatternCreate() {} void FcPatternDestroy() {} void FcPatternAddString() {} void FcPatternAddInteger() {} void FcPatternAddDouble() {} void FcPatternAddBool() {} void FcPatternGetString() {} void FcPatternGetInteger() {} void FcPatternGetDouble() {} void FcPatternGetBool() {} void FcFontSetCreate() {} void FcFontSetDestroy() {} void FcFontSetAdd() {} void FcObjectSetCreate() {} void FcObjectSetAdd() {} void FcObjectSetDestroy() {} void FcFontList() {} void FcNameParse() {} void FcNameUnparse() {} void FcStrFree() {} void FcStrSetCreate() {} void FcStrSetDestroy() {} void FcStrSetAdd() {} void FcStrSetAddFilename() {} void FcStrListCreate() {} void FcStrListNext() {} void FcStrListDone() {} void FcConfigParseAndLoad() {} void FcConfigBuildFonts() {} void FcInitReinitialize() {} void FcInitBringUptoDate() {} void FcGetResult() {} void FcPatternFormat() {} void FcPatternDuplicate() {} void FcPatternFilter() {} void FcPatternReference() {} void FcValueDestroy() {} void FcValueSave() {} void FcCharSetCreate() {} void FcCharSetDestroy() {} void FcCharSetAddChar() {} void FcCharSetHasChar() {} void FcCharSetCount() {} void FcCharSetIntersect() {} void FcCharSetUnion() {} void FcCharSetSubtract() {} void FcLangSetCreate() {} void FcLangSetDestroy() {} void FcLangSetAdd() {} void FcLangSetHasLang() {} void FcConfigGetFonts() {} void FcConfigGetConfigDirs() {} void FcConfigGetFontDirs() {} void FcConfigGetRescanInterval() {} void FcConfigSetRescanInterval() {} void FcConfigGetConfigFiles() {} void FcConfigGetCacheDirs() {} void FcConfigHomeDir() {} void FcConfigEnableHome() {} void FcConfigFilename() {} void FcConfigAppFontClear() {}' > /tmp/android-stubs/fontconfig.c
-          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/android-stubs/fontconfig.o /tmp/android-stubs/fontconfig.c
+          ${CLANG_BIN} ${CLANG_TARGET_FLAG} -c -o /tmp/android-stubs/fontconfig.o /tmp/android-stubs/fontconfig.c
           ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libfontconfig.a /tmp/android-stubs/fontconfig.o
           echo 'void FT_Init_FreeType() {} void FT_Done_FreeType() {} void FT_New_Face() {} void FT_Done_Face() {} void FT_New_Memory_Face() {} void FT_Open_Face() {} void FT_Attach_File() {} void FT_Attach_Stream() {} void FT_Reference_Face() {} void FT_Set_Char_Size() {} void FT_Set_Pixel_Sizes() {} void FT_Load_Glyph() {} void FT_Load_Char() {} void FT_Render_Glyph() {} void FT_Get_Kerning() {} void FT_Get_Track_Kerning() {} void FT_Get_Glyph_Name() {} void FT_Get_Postscript_Name() {} void FT_Select_Charmap() {} void FT_Set_Charmap() {} void FT_Get_Charmap_Index() {} void FT_Get_CMap_Language_ID() {} void FT_Get_CMap_Format() {} void FT_Get_First_Char() {} void FT_Get_Next_Char() {} void FT_Get_Name_Index() {} void FT_Set_Transform() {} void FT_Get_Transform() {} void FT_Glyph_Copy() {} void FT_Get_Advance() {} void FT_Library_Version() {} void FT_Face_CheckTrueTypePatents() {} void FT_Face_SetUnpatentedHinting() {}' > /tmp/android-stubs/freetype.c
-          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/android-stubs/freetype.o /tmp/android-stubs/freetype.c
+          ${CLANG_BIN} ${CLANG_TARGET_FLAG} -c -o /tmp/android-stubs/freetype.o /tmp/android-stubs/freetype.c
           ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libfreetype.a /tmp/android-stubs/freetype.o
           echo 'void XML_ParserCreate() {} void XML_ParserCreateNS() {} void XML_ParserCreate_MM() {} void XML_ParserFree() {} void XML_Parse() {} void XML_SetElementHandler() {} void XML_SetCharacterDataHandler() {} void XML_SetProcessingInstructionHandler() {} void XML_SetCommentHandler() {} void XML_SetStartCdataSectionHandler() {} void XML_SetEndCdataSectionHandler() {} void XML_SetDefaultHandler() {} void XML_SetDefaultHandlerExpand() {} void XML_SetUnparsedEntityDeclHandler() {} void XML_SetNotationDeclHandler() {} void XML_SetNamespaceDeclHandler() {} void XML_SetStartNamespaceDeclHandler() {} void XML_SetEndNamespaceDeclHandler() {} void XML_SetXmlDeclHandler() {} void XML_SetAttlistDeclHandler() {} void XML_SetEntityDeclHandler() {} void XML_SetDoctypeDeclHandler() {} void XML_SetElementDeclHandler() {} void XML_SetUserData() {} void XML_GetUserData() {} void XML_SetEncoding() {} void XML_UseForeignDTD() {} void XML_SetReturnNSTriplet() {} void XML_GetErrorCode() {} void XML_ErrorString() {} void XML_GetCurrentLineNumber() {} void XML_GetCurrentColumnNumber() {} void XML_GetCurrentByteIndex() {} void XML_GetCurrentByteCount() {} void XML_GetInputContext() {} void XML_SetBase() {} void XML_GetBase() {}' > /tmp/android-stubs/expat.c
-          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/android-stubs/expat.o /tmp/android-stubs/expat.c
+          ${CLANG_BIN} ${CLANG_TARGET_FLAG} -c -o /tmp/android-stubs/expat.o /tmp/android-stubs/expat.c
           ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libexpat.a /tmp/android-stubs/expat.o
 
           # Custom pkg-config wrapper for Android cross-compilation
@@ -375,7 +385,7 @@ jobs:
           # jemalloc stub for Android
           mkdir -p /tmp/jemalloc-stub
           printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
-          ${CLANG_BIN} ${EXTRA_CC_FLAGS} -c -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
+          ${CLANG_BIN} ${CLANG_TARGET_FLAG} -c -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
           ${NDK_BIN}/llvm-ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
@@ -468,6 +478,7 @@ jobs:
 
           # NOTE: surfman (Servo's GPU surface management library) does not natively
           # support iOS. This build will likely fail at the surfman compilation step.
+          # iOS support requires upstream changes to surfman or a replacement surface library.
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
       - name: Make archive
