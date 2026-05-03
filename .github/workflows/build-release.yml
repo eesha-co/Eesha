@@ -260,11 +260,11 @@ jobs:
           export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang"
           export CXX="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang++"
           export AR="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-          export CFLAGS="-D__ANDROID_API__=24"
-          export CXXFLAGS="-D__ANDROID_API__=24"
+          export CFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24"
+          export CXXFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24"
 
           # Build the Rust library for Android
-          # Disable jemalloc for Android (not supported in cross-compilation)
+          # Use --no-default-features to disable bluetooth and background_hang_monitor
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
 
       - name: Prepare APK native libs
@@ -331,9 +331,14 @@ jobs:
         env:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
-          JEMALLOC_OVERRIDE: "skip"
         run: |
-          # Disable jemalloc for iOS (not supported on iOS targets)
+          # jemalloc doesn't support iOS - provide a stub via JEMALLOC_OVERRIDE
+          # We create a minimal empty static library that jemalloc-sys will link against
+          mkdir -p /tmp/jemalloc-stub
+          echo 'void je_mallocx() {} void je_dallocx() {} void je_nallocx() {} void je_rallocx() {} void je_sallocx() {} void je_mallctl() {} void je_mallctlnametomib() {} void je_mallctlbymib() {} void je_malloc_stats_print() {} void je_malloc_usable_size() {} void je_nallocx() {}' > /tmp/jemalloc-stub/jemalloc.c
+          clang -c -target ${{ matrix.target }} -isysroot $(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null || xcrun --sdk iphonesimulator --show-sdk-path 2>/dev/null) -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
+          ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
+          export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
           export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation"
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
