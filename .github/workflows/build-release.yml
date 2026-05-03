@@ -345,7 +345,7 @@ jobs:
           export PKG_CONFIG=/tmp/android-stubs/bin/pkg-config
           export PKG_CONFIG_ALLOW_CROSS=1
           # Create include stub directory for headers
-          mkdir -p /tmp/android-stubs/include/fontconfig /tmp/android-stubs/include/freetype2 /tmp/android-stubs/include/expat
+          mkdir -p /tmp/android-stubs/include/fontconfig /tmp/android-stubs/include/freetype2/freetype /tmp/android-stubs/include/expat
           echo 'typedef void* FcConfig; typedef void* FcPattern; typedef void* FcFontSet; typedef void* FcObjectSet; typedef void* FcCharSet; typedef void* FcLangSet; typedef void* FcStrSet; typedef void* FcStrList; typedef void* FcResult; typedef int FcBool; typedef int FcMatchKind; typedef void* FcValue; #define FcTrue 1 #define FcFalse 0' > /tmp/android-stubs/include/fontconfig/fontconfig.h
           echo 'typedef void* FT_Library; typedef void* FT_Face; typedef void* FT_GlyphSlot; typedef void* FT_Size; typedef void* FT_CharMap; typedef int FT_Error; typedef int FT_Bool; typedef int FT_Long; typedef int FT_Int; typedef unsigned int FT_UInt; typedef int FT_F26Dot6;' > /tmp/android-stubs/include/freetype2/freetype/freetype.h
           echo 'typedef void* XML_Parser; typedef void* XML_StartElementHandler; typedef void* XML_EndElementHandler; typedef void* XML_CharacterDataHandler;' > /tmp/android-stubs/include/expat/expat.h
