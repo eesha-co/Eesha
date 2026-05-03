@@ -37,7 +37,6 @@ jobs:
           name: eesha-linux
           path: |
             desktop/dist/*.AppImage
-            desktop/dist/*.deb
 
   build-desktop-win:
     name: Desktop (Windows)
