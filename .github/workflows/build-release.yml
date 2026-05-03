@@ -388,6 +388,22 @@ jobs:
           ${NDK_BIN}/llvm-ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
+          # Add NDK system library search paths to linker flags
+          # The NDK places system libs (libandroid.so, liblog.so, libc++_shared.so) under
+          # ${SYSROOT}/usr/lib/${TRIPLE}/${API}/ and ${SYSROOT}/usr/lib/${TRIPLE}/
+          # Note: For armeabi-v7a, the LLVM target is "armv7-linux-androideabi" but
+          # the sysroot lib dir uses "armv7a-linux-androideabi" (extra 'a')
+          NDK_LIB_DIR="${NDK_SYSROOT}/usr/lib/${NDK_LLVM_TARGET}/${ANDROID_API}"
+          NDK_LIB_DIR_GENERIC="${NDK_SYSROOT}/usr/lib/${NDK_LLVM_TARGET}"
+          # Also check for armv7a variant (armeabi-v7a specific)
+          NDK_LIB_DIR_ARMV7A="${NDK_SYSROOT}/usr/lib/armv7a-linux-androideabi/${ANDROID_API}"
+          NDK_LIB_DIR_ARMV7A_GENERIC="${NDK_SYSROOT}/usr/lib/armv7a-linux-androideabi"
+          CARGO_TARGET=$(echo "${{ matrix.target }}" | tr '-' '_')
+
+          # Add library search paths and required system libraries via RUSTFLAGS
+          # Include both armv7 and armv7a paths for armeabi-v7a compatibility
+          export "CARGO_TARGET_${CARGO_TARGET}_RUSTFLAGS=-C link-arg=-L${NDK_LIB_DIR} -C link-arg=-L${NDK_LIB_DIR_GENERIC} -C link-arg=-L${NDK_LIB_DIR_ARMV7A} -C link-arg=-L${NDK_LIB_DIR_ARMV7A_GENERIC} -C link-arg=-landroid -C link-arg=-llog"
+
           # Build the Rust library for Android
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
 
