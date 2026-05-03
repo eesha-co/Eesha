@@ -2,7 +2,7 @@
 members = ["eesha-embed", "eesha_messages", "eesha_build"]
 
 [workspace.package]
-version = "0.1.2"
+version = "0.2.0"
 edition = "2024"
 license = "Apache-2.0 OR MIT"
 homepage = "https://github.com/eesha-browser/eesha"
@@ -35,7 +35,7 @@ categories = ["web-programming"]
 name = "eesha"
 product-name = "Eesha"
 identifier = "org.eesha.browser"
-version = "0.1.2"
+version = "0.2.0"
 before-each-package-command = "python etc/package_libs.py"
 resources = [
   "resources",
@@ -152,7 +152,7 @@ webrender = { git = "https://github.com/servo/webrender", branch = "0.66", featu
 webrender_api = { git = "https://github.com/servo/webrender", branch = "0.66" }
 wr_malloc_size_of = { git = "https://github.com/servo/webrender", branch = "0.66" }
 # Packager feature
-cargo-packager-resource-resolver = { version = "0.1.2", features = [
+cargo-packager-resource-resolver = { version = "0.2.0", features = [
   "auto-detect-format",
 ], optional = true }
 chrono = "0.4.41"

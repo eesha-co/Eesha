@@ -388,6 +388,24 @@ jobs:
           ${NDK_BIN}/llvm-ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
+          # CRITICAL: Add NDK sysroot library search paths to RUSTFLAGS.
+          # The Rust linker (via clang) needs to find Android system libs:
+          # - libc++_shared.so (C++ standard library)
+          # - libandroid.so (Android native APIs)
+          # - liblog.so (Android logging)
+          # - libEGL.so, libGLESv2.so (OpenGL ES)
+          # - libOpenSLES.so (audio)
+          # These are in the NDK sysroot under usr/lib/<triple>/ with API-level subdirs.
+          NDK_LIB_DIR="${NDK_SYSROOT}/usr/lib/${NDK_LLVM_TARGET}"
+          echo "NDK lib dir: ${NDK_LIB_DIR}"
+          ls -la "${NDK_LIB_DIR}/" | head -20
+
+          # Set RUSTFLAGS with all necessary library search paths
+          CARGO_TARGET_ENV=$(echo "${{ matrix.target }}" | tr '-' '_' | tr 'a-z' 'A-Z')
+          RUSTFLAGS_VAL="-L ${NDK_LIB_DIR}/${ANDROID_API} -L ${NDK_LIB_DIR} -L ${NDK_SYSROOT}/usr/lib -C link-arg=-L${NDK_LIB_DIR}/${ANDROID_API} -C link-arg=-L${NDK_LIB_DIR}"
+          export "CARGO_TARGET_${CARGO_TARGET_ENV}_RUSTFLAGS=${RUSTFLAGS_VAL}"
+          echo "RUSTFLAGS for ${{ matrix.target }}: ${RUSTFLAGS_VAL}"
+
           # Build the Rust library for Android
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
 
@@ -466,6 +484,24 @@ jobs:
             SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           fi
 
+          echo "Building for ${{ matrix.target }}"
+          echo "  CLANG_TARGET: ${CLANG_TARGET}"
+          echo "  SDK: ${SDK}"
+
+          # Set CC/CXX for the target so C/C++ crates (e.g. aws-lc-rs, mozjs) compile correctly
+          CARGO_TARGET_ENV=$(echo "${{ matrix.target }}" | tr '-' '_' | tr 'a-z' 'A-Z')
+          export "CC_${CARGO_TARGET_ENV}"="clang"
+          export "CXX_${CARGO_TARGET_ENV}"="clang++"
+          export "CFLAGS_${CARGO_TARGET_ENV}"="-target ${CLANG_TARGET} -isysroot ${SDK} -iframework ${SDK}/System/Library/Frameworks"
+          export "CXXFLAGS_${CARGO_TARGET_ENV}"="-target ${CLANG_TARGET} -isysroot ${SDK} -iframework ${SDK}/System/Library/Frameworks -std=c++17"
+          export "AR_${CARGO_TARGET_ENV}"="ar"
+
+          # Set up cargo linker config for iOS
+          mkdir -p .cargo
+          echo "[target.${{ matrix.target }}]" >> .cargo/config.toml
+          echo "linker = \"clang\"" >> .cargo/config.toml
+          echo "ar = \"ar\"" >> .cargo/config.toml
+
           # jemalloc doesn't support iOS - provide a stub
           mkdir -p /tmp/jemalloc-stub
           printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
@@ -473,11 +509,16 @@ jobs:
           ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
-          export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
-          export CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
+          # RUSTFLAGS for iOS linking: frameworks + sysroot + search paths
+          # Core frameworks needed: Foundation, UIKit, OpenGLES (for surfman EAGL),
+          # CoreGraphics, CoreText, QuartzCore (for Servo rendering on iOS)
+          RUSTFLAGS_VAL="-C link-arg=-target -C link-arg=${CLANG_TARGET} -C link-arg=-isysroot -C link-arg=${SDK} -C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES -C link-arg=-framework -C link-arg=CoreGraphics -C link-arg=-framework -C link-arg=CoreText -C link-arg=-framework -C link-arg=QuartzCore -C link-arg=-framework -C link-arg=MobileCoreServices -C link-arg=-L${SDK}/usr/lib"
+          export "CARGO_TARGET_${CARGO_TARGET_ENV}_RUSTFLAGS=${RUSTFLAGS_VAL}"
+          echo "RUSTFLAGS for ${{ matrix.target }}: ${RUSTFLAGS_VAL}"
 
           # NOTE: surfman iOS EAGL backend is provided by the eesha-co/surfman fork.
           # The patch is configured in Cargo.toml [patch."https://github.com/servo/surfman"].
+          # Build with --no-default-features to disable bluetooth (not available on iOS)
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
       - name: Make archive
