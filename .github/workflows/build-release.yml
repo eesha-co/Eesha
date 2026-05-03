@@ -334,7 +334,15 @@ jobs:
           # We create a minimal empty static library that jemalloc-sys will link against
           mkdir -p /tmp/jemalloc-stub
           printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
-          clang -c -target ${{ matrix.target }} -isysroot $(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null || xcrun --sdk iphonesimulator --show-sdk-path 2>/dev/null) -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
+          # Determine the correct clang target and SDK for iOS
+          if [ "${{ matrix.target }}" = "aarch64-apple-ios-sim" ]; then
+            CLANG_TARGET="arm64-apple-ios14.0-simulator"
+            SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
+          else
+            CLANG_TARGET="arm64-apple-ios14.0"
+            SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          fi
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
           ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
           export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation"
