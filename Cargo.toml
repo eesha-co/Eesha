@@ -86,6 +86,8 @@ embed-resource = { version = "3", optional = true }
 embed-resource = "3"
 
 [dependencies]
+# Force vendored OpenSSL for cross-compilation (Android/iOS)
+openssl-sys = { version = "0.9", features = ["vendored"] }
 arboard = "3.4.0"
 crossbeam-channel = "0.5"
 env_logger = "0.11"

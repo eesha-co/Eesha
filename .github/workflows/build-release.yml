@@ -241,6 +241,7 @@ jobs:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
+          OPENSSL_NO_VENDOR: "0"
         run: |
           # Determine the correct NDK tool prefix
           # NDK bin names: aarch64-linux-android24-clang, armv7-linux-androideabi24-clang, x86_64-linux-android24-clang
@@ -256,13 +257,18 @@ jobs:
           echo "linker = \"${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang\"" >> .cargo/config.toml
           echo "ar = \"${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar\"" >> .cargo/config.toml
 
-          # Set CC/CXX for C/C++ dependencies
+          # Set CC/CXX for C/C++ dependencies (needed for vendored OpenSSL build)
           export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang"
           export CXX="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOL_PREFIX}24-clang++"
           export AR="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          export RANLIB="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib"
+
+          # Set Android API level for OpenSSL vendored build
+          export ANDROID_API=24
 
           # Build the Rust library for Android
           # Use --no-default-features to disable bluetooth and background_hang_monitor
+          # openssl-sys with vendored feature will build OpenSSL from source using the NDK
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
 
       - name: Prepare APK native libs
@@ -329,11 +335,9 @@ jobs:
         env:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
+          X11_NO_PKG_CONFIG: "1"
+          PKG_CONFIG_ALLOW_CROSS: "1"
         run: |
-          # jemalloc doesn't support iOS - provide a stub via JEMALLOC_OVERRIDE
-          # We create a minimal empty static library that jemalloc-sys will link against
-          mkdir -p /tmp/jemalloc-stub
-          printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
           # Determine the correct clang target and SDK for iOS
           if [ "${{ matrix.target }}" = "aarch64-apple-ios-sim" ]; then
             CLANG_TARGET="arm64-apple-ios14.0-simulator"
@@ -342,10 +346,132 @@ jobs:
             CLANG_TARGET="arm64-apple-ios14.0"
             SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           fi
+
+          # jemalloc doesn't support iOS - provide a stub via JEMALLOC_OVERRIDE
+          mkdir -p /tmp/jemalloc-stub
+          printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
           clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
           ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
-          export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation"
+
+          # X11 doesn't exist on iOS - create stub libraries for the x11 crate
+          mkdir -p /tmp/x11-stub
+          printf 'void XOpenDisplay() {}\nvoid XCloseDisplay() {}\nvoid XCreateWindow() {}\nvoid XDestroyWindow() {}\nvoid XMapWindow() {}\nvoid XUnmapWindow() {}\nvoid XFlush() {}\nvoid XSync() {}\nvoid XGetGeometry() {}\nvoid XCreateGC() {}\nvoid XFreeGC() {}\nvoid XDrawRectangle() {}\nvoid XFillRectangle() {}\nvoid XDrawLine() {}\nvoid XDrawString() {}\nvoid XSetForeground() {}\nvoid XSetBackground() {}\nvoid XSelectInput() {}\nvoid XNextEvent() {}\nvoid XSendEvent() {}\nvoid XPending() {}\nvoid XLookupKeysym() {}\nvoid XCreatePixmap() {}\nvoid XFreePixmap() {}\nvoid XCreateColormap() {}\nvoid XFreeColormap() {}\nvoid XInternAtom() {}\nvoid XSetWMProtocols() {}\nvoid XGetWMNormalHints() {}\nvoid XSetWMNormalHints() {}\nvoid XChangeProperty() {}\nvoid XGrabServer() {}\nvoid XUngrabServer() {}\nvoid XGetInputFocus() {}\nvoid XSetInputFocus() {}\nvoid XWarpPointer() {}\nvoid XQueryTree() {}\nvoid XTranslateCoordinates() {}\nvoid XGetWindowAttributes() {}\nvoid XChangeWindowAttributes() {}\nvoid XConfigureWindow() {}\nvoid XMoveResizeWindow() {}\nvoid XResizeWindow() {}\nvoid XMoveWindow() {}\nvoid XRaiseWindow() {}\nvoid XLowerWindow() {}\nvoid XRestackWindows() {}\nvoid XIconifyWindow() {}\nvoid XReparentWindow() {}\nvoid XkbGetMap() {}\nvoid XkbFreeKeyboard() {}\nvoid XrmInitialize() {}\nvoid XOpenIM() {}\nvoid XCloseIM() {}\nvoid XCreateIC() {}\nvoid XDestroyIC() {}\nvoid XSetICFocus() {}\nvoid XUnsetICFocus() {}\nvoid XFilterEvent() {}\nvoid XmbLookupString() {}\nvoid Xutf8LookupString() {}\nvoid XConvertSelection() {}\nvoid XSetSelectionOwner() {}\nvoid XGetSelectionOwner() {}\nvoid XScreenOfDisplay() {}\nvoid XDefaultScreen() {}\nvoid XDefaultRootWindow() {}\nvoid XDefaultVisual() {}\nvoid XDefaultDepth() {}\nvoid XDefaultScreenOfDisplay() {}\nvoid XDisplayWidth() {}\nvoid XDisplayHeight() {}\nvoid XConnectionNumber() {}\nvoid XInitExtension() {}\nvoid XShmQueryVersion() {}\nvoid XShmCreateImage() {}\nvoid XShmDetach() {}\nvoid XShmAttach() {}\nvoid XRenderQueryVersion() {}\nvoid XRenderFindVisualFormat() {}\nvoid XRenderCreatePicture() {}\nvoid XRenderFreePicture() {}\nvoid XRenderFillRectangle() {}\nvoid XRenderComposite() {}\nvoid XRenderSetPictureClipRectangles() {}\n' > /tmp/x11-stub/x11.c
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/x11.o /tmp/x11-stub/x11.c
+          ar rcs /tmp/x11-stub/libX11.a /tmp/x11-stub/x11.o
+
+          # Create Xext stub
+          printf 'void XShmGetImage() {}\nvoid XShmPutImage() {}\nvoid XShmCreatePixmap() {}\nvoid XMITMiscGetBugMode() {}\nvoid XMITMiscSetBugMode() {}\n' > /tmp/x11-stub/xext.c
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xext.o /tmp/x11-stub/xext.c
+          ar rcs /tmp/x11-stub/libXext.a /tmp/x11-stub/xext.o
+
+          # Create Xcursor stub
+          printf 'void XcursorLibraryLoadCursor() {}\nvoid XcursorShapeLoadCursor() {}\nvoid XcursorImageCreate() {}\nvoid XcursorImageDestroy() {}\nvoid XcursorImageLoadCursor() {}\n' > /tmp/x11-stub/xcursor.c
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xcursor.o /tmp/x11-stub/xcursor.c
+          ar rcs /tmp/x11-stub/libXcursor.a /tmp/x11-stub/xcursor.o
+
+          # Create Xi stub
+          printf 'void XISelectEvents() {}\nvoid XIQueryDevice() {}\nvoid XIFreeDeviceInfo() {}\nvoid XIQueryVersion() {}\n' > /tmp/x11-stub/xi.c
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xi.o /tmp/x11-stub/xi.c
+          ar rcs /tmp/x11-stub/libXi.a /tmp/x11-stub/xi.o
+
+          # Create Xrender stub
+          printf 'void XRenderQueryExtension() {}\nvoid XRenderQueryFormats() {}\n' > /tmp/x11-stub/xrender.c
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xrender.o /tmp/x11-stub/xrender.c
+          ar rcs /tmp/x11-stub/libXrender.a /tmp/x11-stub/xrender.o
+
+          # Create Xrandr stub
+          printf 'void XRRGetScreenInfo() {}\nvoid XRRConfigCurrentConfiguration() {}\nvoid XRRConfigCurrentRate() {}\nvoid XRRConfigRates() {}\nvoid XRRConfigSizes() {}\nvoid XRRFreeConfigInfo() {}\nvoid XRRQueryExtension() {}\nvoid XRRQueryVersion() {}\nvoid XRRGetScreenSizeRange() {}\nvoid XRRSetScreenSize() {}\nvoid XRRGetScreenResources() {}\nvoid XRRFreeScreenResources() {}\nvoid XRRGetOutputInfo() {}\nvoid XRRFreeOutputInfo() {}\nvoid XRRGetCrtcInfo() {}\nvoid XRRFreeCrtcInfo() {}\nvoid XRRSetCrtcConfig() {}\n' > /tmp/x11-stub/xrandr.c
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xrandr.o /tmp/x11-stub/xrandr.c
+          ar rcs /tmp/x11-stub/libXrandr.a /tmp/x11-stub/xrandr.o
+
+          # Create GLX stub
+          printf 'void glXCreateContext() {}\nvoid glXDestroyContext() {}\nvoid glXMakeCurrent() {}\nvoid glXSwapBuffers() {}\nvoid glXChooseVisual() {}\nvoid glXQueryExtension() {}\nvoid glXQueryVersion() {}\nvoid glXGetConfig() {}\nvoid glXGetCurrentContext() {}\nvoid glXGetCurrentDrawable() {}\nvoid glXCreateNewContext() {}\nvoid glXCreateWindow() {}\nvoid glXDestroyWindow() {}\nvoid glXGetVisualFromFBConfig() {}\nvoid glXChooseFBConfig() {}\nvoid glXGetFBConfigAttrib() {}\nvoid glXQueryExtensionsString() {}\n' > /tmp/x11-stub/glx.c
+          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/glx.o /tmp/x11-stub/glx.c
+          ar rcs /tmp/x11-stub/libGL.a /tmp/x11-stub/glx.o
+
+          # Create pkg-config directory for x11 stubs
+          mkdir -p /tmp/x11-stub/pkgconfig
+          cat > /tmp/x11-stub/pkgconfig/x11.pc << 'PCEOF'
+          prefix=/tmp/x11-stub
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}
+          includedir=${prefix}/include
+          Name: X11
+          Description: X11 stub for iOS
+          Version: 1.0
+          Libs: -L${libdir} -lX11
+          Cflags: -I${includedir}
+          PCEOF
+          cat > /tmp/x11-stub/pkgconfig/xext.pc << 'PCEOF'
+          prefix=/tmp/x11-stub
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}
+          includedir=${prefix}/include
+          Name: Xext
+          Description: Xext stub for iOS
+          Version: 1.0
+          Libs: -L${libdir} -lXext
+          Cflags: -I${includedir}
+          PCEOF
+          cat > /tmp/x11-stub/pkgconfig/xcursor.pc << 'PCEOF'
+          prefix=/tmp/x11-stub
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}
+          includedir=${prefix}/include
+          Name: Xcursor
+          Description: Xcursor stub for iOS
+          Version: 1.0
+          Libs: -L${libdir} -lXcursor
+          Cflags: -I${includedir}
+          PCEOF
+          cat > /tmp/x11-stub/pkgconfig/xi.pc << 'PCEOF'
+          prefix=/tmp/x11-stub
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}
+          includedir=${prefix}/include
+          Name: Xi
+          Description: Xi stub for iOS
+          Version: 1.0
+          Libs: -L${libdir} -lXi
+          Cflags: -I${includedir}
+          PCEOF
+          cat > /tmp/x11-stub/pkgconfig/xrender.pc << 'PCEOF'
+          prefix=/tmp/x11-stub
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}
+          includedir=${prefix}/include
+          Name: Xrender
+          Description: Xrender stub for iOS
+          Version: 1.0
+          Libs: -L${libdir} -lXrender
+          Cflags: -I${includedir}
+          PCEOF
+          cat > /tmp/x11-stub/pkgconfig/xrandr.pc << 'PCEOF'
+          prefix=/tmp/x11-stub
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}
+          includedir=${prefix}/include
+          Name: Xrandr
+          Description: Xrandr stub for iOS
+          Version: 1.0
+          Libs: -L${libdir} -lXrandr
+          Cflags: -I${includedir}
+          PCEOF
+
+          export PKG_CONFIG_PATH=/tmp/x11-stub/pkgconfig
+          export PKG_CONFIG_SYSROOT_DIR=/tmp/x11-stub
+
+          # Create X11 include headers for the Rust x11 crate
+          mkdir -p /tmp/x11-stub/include/X11
+          printf '#ifndef X11_STUB_H\n#define X11_STUB_H\ntypedef void* Display;\ntypedef unsigned long Window;\ntypedef unsigned long Drawable;\ntypedef unsigned long Pixmap;\ntypedef unsigned long Colormap;\ntypedef unsigned long Cursor;\ntypedef unsigned long VisualID;\ntypedef void* Visual;\ntypedef void* Screen;\ntypedef void* GC;\ntypedef int Bool;\ntypedef int Status;\ntypedef void* XImage;\ntypedef void* XSetWindowAttributes;\ntypedef void* XWindowAttributes;\ntypedef void* XEvent;\ntypedef void* Atom;\ntypedef void* XVisualInfo;\ntypedef void* XSizeHints;\ntypedef void* XWMHints;\ntypedef void* XTextProperty;\ntypedef void* XClassHint;\ntypedef void* XWMHints;\ntypedef int XKeyEvent;\ntypedef int XButtonEvent;\ntypedef int XMotionEvent;\ntypedef int XCrossingEvent;\ntypedef int XConfigureEvent;\ntypedef int XClientMessageEvent;\ntypedef int XSelectionEvent;\ntypedef int XPropertyEvent;\ntypedef int XDestroyWindowEvent;\ntypedef int XMapEvent;\ntypedef int XUnmapEvent;\ntypedef int XFocusChangeEvent;\ntypedef int XExposeEvent;\ntypedef int XVisibilityEvent;\ntypedef int XGravityEvent;\ntypedef int XReparentEvent;\ntypedef int XConfigureRequestEvent;\ntypedef int XMapRequestEvent;\ntypedef int XResizeRequestEvent;\ntypedef int XCirculateEvent;\ntypedef int XCirculateRequestEvent;\ntypedef int XColormapEvent;\ntypedef int XMappingEvent;\ntypedef int XSelectionClearEvent;\ntypedef int XSelectionRequestEvent;\ntypedef int XNoExposeEvent;\ntypedef unsigned long KeySym;\ntypedef unsigned long KeyCode;\n#define None 0L\n#define CopyFromParent 0L\n#define InputOutput 1\n#define InputOnly 2\n#define CWBackPixel (1L<<1)\n#define CWEventMask (1L<<11)\n#define StructureNotifyMask (1L<<16)\n#define SubstructureRedirectMask (1L<<20)\n#define SubstructureNotifyMask (1L<<19)\n#define ButtonPressMask (1L<<2)\n#define ButtonReleaseMask (1L<<3)\n#define PointerMotionMask (1L<<6)\n#define KeyPressMask (1L<<0)\n#define KeyReleaseMask (1L<<1)\n#define ExposureMask (1L<<15)\n#define FocusChangeMask (1L<<21)\n#define EnterWindowMask (1L<<4)\n#define LeaveWindowMask (1L<<5)\n#define PropertyChangeMask (1L<<22)\n#define VisibilityChangeMask (1L<<16)\n#endif\n' > /tmp/x11-stub/include/X11/Xlib.h
+
+          export C_INCLUDE_PATH=/tmp/x11-stub/include
+          export CFLAGS="-I/tmp/x11-stub/include"
+
+          export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -L /tmp/x11-stub"
+          export CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -L /tmp/x11-stub"
+
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
       - name: Make archive
