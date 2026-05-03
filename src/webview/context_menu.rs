@@ -73,6 +73,8 @@ impl ContextMenu {
     /// **Platform Specific**
     /// - macOS / Windows: Creates a context menu by muda crate with natvie OS support
     /// - Wayland: Creates a context menu with webview implementation
+    /// - Android/iOS: Not available (context menus are dismissed automatically)
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     pub fn new_with_menu(servo_result_sender: IpcSender<ContextMenuResult>, menu: Menu) -> Self {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         {

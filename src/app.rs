@@ -6,7 +6,9 @@ use std::{
 
 use crate::clipboard::Clipboard;
 use base::id::{PipelineNamespace, PipelineNamespaceId, WebViewId};
+#[cfg(feature = "bluetooth")]
 use bluetooth::BluetoothThreadFactory;
+#[cfg(feature = "bluetooth")]
 use bluetooth_traits::BluetoothRequest;
 use canvas::canvas_paint_thread::CanvasPaintThread;
 use compositing_traits::{
@@ -263,6 +265,7 @@ impl Eesha {
         webrender.set_external_image_handler(external_image_handlers);
 
         // Create bluetooth thread
+        #[cfg(feature = "bluetooth")]
         let bluetooth_thread: IpcSender<BluetoothRequest> =
             BluetoothThreadFactory::new(embedder_proxy.clone());
 
@@ -303,6 +306,7 @@ impl Eesha {
             compositor_proxy: compositor_proxy.clone(),
             embedder_proxy,
             devtools_sender,
+            #[cfg(feature = "bluetooth")]
             bluetooth_thread,
             system_font_service,
             public_resource_threads,
@@ -394,7 +398,7 @@ impl Eesha {
             to_controller_sender,
             embedder_receiver,
             _js_engine_setup: js_engine_setup,
-            clipboard: Clipboard::new().ok(),
+            clipboard: Clipboard::new(),
             config,
             bookmark_manager: BookmarkManager::new(),
             downloads: HashMap::new(),

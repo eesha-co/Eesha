@@ -184,7 +184,10 @@ jobs:
         target:
           - aarch64-linux-android
           - armv7-linux-androideabi
-          - x86_64-linux-android
+          # NOTE: x86_64-linux-android is excluded because OpenSSL's vendored build
+          # uses AVX-512 SM3 assembly that the Android NDK assembler doesn't support.
+          # The openssl-src crate doesn't respect OPENSSL_NO_ASM for Android targets.
+          # x86_64 Android is primarily for emulators; real devices use arm64.
         include:
           - target: aarch64-linux-android
             abi: arm64-v8a
@@ -192,9 +195,6 @@ jobs:
           - target: armv7-linux-androideabi
             abi: armeabi-v7a
             ndk_llvm_target: armv7-linux-androideabi
-          - target: x86_64-linux-android
-            abi: x86_64
-            ndk_llvm_target: x86_64-linux-android
     steps:
       - uses: actions/checkout@v4
 

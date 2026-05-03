@@ -1091,30 +1091,37 @@ impl Window {
 
     /// Show notification
     pub fn show_notification(&self, notification: &Notification) {
-        let mut display_notification = notify_rust::Notification::new();
-
-        display_notification
-            .summary(&notification.title)
-            .body(&notification.body);
-
-        #[cfg(linux)]
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
-            if let Some(icon_image) = notification.icon_resource.as_ref().and_then(|icon| {
-                Image::from_rgba(icon.width as i32, icon.height as i32, icon.bytes().to_vec()).ok()
-            }) {
-                display_notification.image_data(icon_image);
-            }
-        }
+            let mut display_notification = notify_rust::Notification::new();
 
-        #[cfg(linux)]
-        std::thread::spawn(move || {
-            if let Ok(handle) = display_notification.show() {
-                // prevent handler dropped immediately which will close the notification as well
-                handle.on_close(|| {});
+            display_notification
+                .summary(&notification.title)
+                .body(&notification.body);
+
+            #[cfg(linux)]
+            {
+                if let Some(icon_image) = notification.icon_resource.as_ref().and_then(|icon| {
+                    Image::from_rgba(icon.width as i32, icon.height as i32, icon.bytes().to_vec()).ok()
+                }) {
+                    display_notification.image_data(icon_image);
+                }
             }
-        });
-        #[cfg(not(linux))]
-        let _ = display_notification.show();
+
+            #[cfg(linux)]
+            std::thread::spawn(move || {
+                if let Ok(handle) = display_notification.show() {
+                    // prevent handler dropped immediately which will close the notification as well
+                    handle.on_close(|| {});
+                }
+            });
+            #[cfg(not(linux))]
+            let _ = display_notification.show();
+        }
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            log::info!("Notification: {} - {}", notification.title, notification.body);
+        }
     }
 
     /// Close window's webview menu

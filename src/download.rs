@@ -191,7 +191,7 @@ pub(crate) async fn download_body(
             return;
         };
 
-        let file_path = file_handle.path();
+        let file_path = file_handle.path().to_path_buf();
         download_to_path(url, resp, eesha_internal_sender, filename, file_path).await;
     }
 
