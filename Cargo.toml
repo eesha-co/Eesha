@@ -200,3 +200,32 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(linux)', 'cfg(macos)', 'cf
 # Patch surfman to use the Eesha fork with iOS EAGL backend support
 [patch."https://github.com/servo/surfman"]
 surfman = { git = "https://github.com/eesha-co/surfman", branch = "main" }
+
+# Patch servo to use the Eesha fork with iOS font platform support
+[patch."https://github.com/servo/servo"]
+background_hang_monitor = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+base = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+bluetooth = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+bluetooth_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+canvas = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+compositing_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+constellation = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+constellation_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+devtools = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+embedder_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+fonts = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+layout_thread_2020 = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+media = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+net = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+net_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+profile = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+profile_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+script = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+script_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+servo_allocator = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+servo_config = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+servo_geometry = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+servo_url = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+webdriver_server = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+webgpu = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }
+webgpu_traits = { git = "https://github.com/eesha-co/servo", branch = "eesha-ios" }

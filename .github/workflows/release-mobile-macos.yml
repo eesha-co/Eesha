@@ -22,9 +22,12 @@ jobs:
           - target: aarch64-linux-android
             abi: arm64-v8a
             ndk_llvm_target: aarch64-linux-android
+            ndk_lib_dir: aarch64-linux-android
           - target: armv7-linux-androideabi
             abi: armeabi-v7a
             ndk_llvm_target: armv7-linux-androideabi
+            # NDK r26c uses armv7a (with 'a') for the sysroot lib directory
+            ndk_lib_dir: armv7a-linux-androideabi
     steps:
       - uses: actions/checkout@v4
 
@@ -115,7 +118,10 @@ jobs:
           export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include/c++/v1 -stdlib=libc++ -std=c++17 ${CLANG_TARGET_FLAG}"
 
           # Add NDK sysroot library search paths to RUSTFLAGS
-          NDK_LIB_DIR="${NDK_SYSROOT}/usr/lib/${NDK_LLVM_TARGET}"
+          # NOTE: The sysroot lib directory name differs from the LLVM target name for armv7:
+          #   arm64 -> aarch64-linux-android (same)
+          #   armv7 -> armv7a-linux-androideabi (extra 'a')
+          NDK_LIB_DIR="${NDK_SYSROOT}/usr/lib/${{ matrix.ndk_lib_dir }}"
           CARGO_TARGET_ENV=$(echo "${{ matrix.target }}" | tr '-' '_' | tr 'a-z' 'A-Z')
           RUSTFLAGS_VAL="-L ${NDK_LIB_DIR}/${ANDROID_API} -L ${NDK_LIB_DIR} -L ${NDK_SYSROOT}/usr/lib -C link-arg=-L${NDK_LIB_DIR}/${ANDROID_API} -C link-arg=-L${NDK_LIB_DIR}"
           export "CARGO_TARGET_${CARGO_TARGET_ENV}_RUSTFLAGS=${RUSTFLAGS_VAL}"
