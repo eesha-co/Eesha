@@ -276,6 +276,79 @@ jobs:
           export CXX_${{ matrix.target }}="${CXX}"
           export AR_${{ matrix.target }}="${AR}"
 
+          # Create stub libraries for pkg-config-dependent crates
+          # fontconfig, freetype2, expat are needed by yeslogic-fontconfig-sys
+          mkdir -p /tmp/android-stubs
+          # Create fontconfig stub
+          echo 'void FcInit() {} void FcFini() {} void FcGetVersion() {} void FcConfigGetCurrent() {} void FcConfigAppFontAddFile() {} void FcConfigAppFontAddDir() {} void FcConfigSubstitute() {} void FcDefaultSubstitute() {} void FcFontMatch() {} void FcFontSort() {} void FcPatternCreate() {} void FcPatternDestroy() {} void FcPatternAddString() {} void FcPatternAddInteger() {} void FcPatternAddDouble() {} void FcPatternAddBool() {} void FcPatternGetString() {} void FcPatternGetInteger() {} void FcPatternGetDouble() {} void FcPatternGetBool() {} void FcFontSetCreate() {} void FcFontSetDestroy() {} void FcFontSetAdd() {} void FcObjectSetCreate() {} void FcObjectSetAdd() {} void FcObjectSetDestroy() {} void FcFontList() {} void FcNameParse() {} void FcNameUnparse() {} void FcStrFree() {} void FcStrSetCreate() {} void FcStrSetDestroy() {} void FcStrSetAdd() {} void FcStrSetAddFilename() {} void FcStrListCreate() {} void FcStrListNext() {} void FcStrListDone() {} void FcConfigParseAndLoad() {} void FcConfigBuildFonts() {} void FcInitReinitialize() {} void FcInitBringUptoDate() {} void FcGetResult() {} void FcPatternFormat() {} void FcPatternDuplicate() {} void FcPatternFilter() {} void FcPatternReference() {} void FcValueDestroy() {} void FcValueSave() {} void FcCharSetCreate() {} void FcCharSetDestroy() {} void FcCharSetAddChar() {} void FcCharSetHasChar() {} void FcCharSetCount() {} void FcCharSetIntersect() {} void FcCharSetUnion() {} void FcCharSetSubtract() {} void FcLangSetCreate() {} void FcLangSetDestroy() {} void FcLangSetAdd() {} void FcLangSetHasLang() {} void FcConfigGetFonts() {} void FcConfigGetConfigDirs() {} void FcConfigGetFontDirs() {} void FcConfigGetRescanInterval() {} void FcConfigSetRescanInterval() {} void FcConfigGetConfigFiles() {} void FcConfigGetCacheDirs() {} void FcConfigHomeDir() {} void FcConfigEnableHome() {} void FcConfigFilename() {} void FcConfigAppFontClear() {}' > /tmp/android-stubs/fontconfig.c
+          ${CC} -c -o /tmp/android-stubs/fontconfig.o /tmp/android-stubs/fontconfig.c
+          ${AR} rcs /tmp/android-stubs/libfontconfig.a /tmp/android-stubs/fontconfig.o
+          # Create freetype2 stub
+          echo 'void FT_Init_FreeType() {} void FT_Done_FreeType() {} void FT_New_Face() {} void FT_Done_Face() {} void FT_New_Memory_Face() {} void FT_Open_Face() {} void FT_Attach_File() {} void FT_Attach_Stream() {} void FT_Reference_Face() {} void FT_Set_Char_Size() {} void FT_Set_Pixel_Sizes() {} void FT_Load_Glyph() {} void FT_Load_Char() {} void FT_Render_Glyph() {} void FT_Get_Kerning() {} void FT_Get_Track_Kerning() {} void FT_Get_Glyph_Name() {} void FT_Get_Postscript_Name() {} void FT_Select_Charmap() {} void FT_Set_Charmap() {} void FT_Get_Charmap_Index() {} void FT_Get_CMap_Language_ID() {} void FT_Get_CMap_Format() {} void FT_Get_First_Char() {} void FT_Get_Next_Char() {} void FT_Get_Name_Index() {} void FT_Set_Transform() {} void FT_Get_Transform() {} void FT_Glyph_Copy() {} void FT_Get_Advance() {} void FT_Library_Version() {} void FT_Face_CheckTrueTypePatents() {} void FT_Face_SetUnpatentedHinting() {}' > /tmp/android-stubs/freetype.c
+          ${CC} -c -o /tmp/android-stubs/freetype.o /tmp/android-stubs/freetype.c
+          ${AR} rcs /tmp/android-stubs/libfreetype.a /tmp/android-stubs/freetype.o
+          # Create expat stub
+          echo 'void XML_ParserCreate() {} void XML_ParserCreateNS() {} void XML_ParserCreate_MM() {} void XML_ParserFree() {} void XML_Parse() {} void XML_SetElementHandler() {} void XML_SetCharacterDataHandler() {} void XML_SetProcessingInstructionHandler() {} void XML_SetCommentHandler() {} void XML_SetStartCdataSectionHandler() {} void XML_SetEndCdataSectionHandler() {} void XML_SetDefaultHandler() {} void XML_SetDefaultHandlerExpand() {} void XML_SetUnparsedEntityDeclHandler() {} void XML_SetNotationDeclHandler() {} void XML_SetNamespaceDeclHandler() {} void XML_SetStartNamespaceDeclHandler() {} void XML_SetEndNamespaceDeclHandler() {} void XML_SetXmlDeclHandler() {} void XML_SetAttlistDeclHandler() {} void XML_SetEntityDeclHandler() {} void XML_SetDoctypeDeclHandler() {} void XML_SetElementDeclHandler() {} void XML_SetUserData() {} void XML_GetUserData() {} void XML_SetEncoding() {} void XML_UseForeignDTD() {} void XML_SetReturnNSTriplet() {} void XML_GetErrorCode() {} void XML_ErrorString() {} void XML_GetCurrentLineNumber() {} void XML_GetCurrentColumnNumber() {} void XML_GetCurrentByteIndex() {} void XML_GetCurrentByteCount() {} void XML_GetInputContext() {} void XML_SetBase() {} void XML_GetBase() {}' > /tmp/android-stubs/expat.c
+          ${CC} -c -o /tmp/android-stubs/expat.o /tmp/android-stubs/expat.c
+          ${AR} rcs /tmp/android-stubs/libexpat.a /tmp/android-stubs/expat.o
+
+          # Create a custom pkg-config wrapper for Android cross-compilation
+          # This handles all pkg-config queries and returns our stub paths
+          mkdir -p /tmp/android-stubs/bin
+          echo '#!/bin/bash' > /tmp/android-stubs/bin/pkg-config
+          echo 'case "$1" in' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --libs)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    case "$2" in' >> /tmp/android-stubs/bin/pkg-config
+          echo '      fontconfig) echo "-L/tmp/android-stubs -lfontconfig -lfreetype -lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      freetype2) echo "-L/tmp/android-stubs -lfreetype" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      expat) echo "-L/tmp/android-stubs -lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      x11) echo "-L/tmp/android-stubs -lX11" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xext) echo "-L/tmp/android-stubs -lXext" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xcursor) echo "-L/tmp/android-stubs -lXcursor" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xi) echo "-L/tmp/android-stubs -lXi" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xrender) echo "-L/tmp/android-stubs -lXrender" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xrandr) echo "-L/tmp/android-stubs -lXrandr" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xcb) echo "-L/tmp/android-stubs -lxcb" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xcb-render) echo "-L/tmp/android-stubs -lxcb-render" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      xcb-shm) echo "-L/tmp/android-stubs -lxcb-shm" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      *) echo "-L/tmp/android-stubs" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '    esac ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --cflags)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    echo "-I/tmp/android-stubs/include" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --exists)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    exit 0 ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --atleast-version)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    exit 0 ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --modversion)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    echo "1.0" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --libs-only-l)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    case "$2" in' >> /tmp/android-stubs/bin/pkg-config
+          echo '      fontconfig) echo "-lfontconfig -lfreetype -lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      freetype2) echo "-lfreetype" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      expat) echo "-lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      x11) echo "-lX11" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '      *) echo "" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '    esac ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --libs-only-L)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    echo "-L/tmp/android-stubs" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --libs-only-other)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    echo "" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --cflags-only-I)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    echo "-I/tmp/android-stubs/include" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  --cflags-only-other)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    echo "" ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo '  *)' >> /tmp/android-stubs/bin/pkg-config
+          echo '    /usr/bin/pkg-config "$@" 2>/dev/null || true ;;' >> /tmp/android-stubs/bin/pkg-config
+          echo 'esac' >> /tmp/android-stubs/bin/pkg-config
+          chmod +x /tmp/android-stubs/bin/pkg-config
+          export PKG_CONFIG=/tmp/android-stubs/bin/pkg-config
+          export PKG_CONFIG_ALLOW_CROSS=1
+          # Create include stub directory for headers
+          mkdir -p /tmp/android-stubs/include/fontconfig /tmp/android-stubs/include/freetype2 /tmp/android-stubs/include/expat
+          echo 'typedef void* FcConfig; typedef void* FcPattern; typedef void* FcFontSet; typedef void* FcObjectSet; typedef void* FcCharSet; typedef void* FcLangSet; typedef void* FcStrSet; typedef void* FcStrList; typedef void* FcResult; typedef int FcBool; typedef int FcMatchKind; typedef void* FcValue; #define FcTrue 1 #define FcFalse 0' > /tmp/android-stubs/include/fontconfig/fontconfig.h
+          echo 'typedef void* FT_Library; typedef void* FT_Face; typedef void* FT_GlyphSlot; typedef void* FT_Size; typedef void* FT_CharMap; typedef int FT_Error; typedef int FT_Bool; typedef int FT_Long; typedef int FT_Int; typedef unsigned int FT_UInt; typedef int FT_F26Dot6;' > /tmp/android-stubs/include/freetype2/freetype/freetype.h
+          echo 'typedef void* XML_Parser; typedef void* XML_StartElementHandler; typedef void* XML_EndElementHandler; typedef void* XML_CharacterDataHandler;' > /tmp/android-stubs/include/expat/expat.h
+
           # jemalloc's configure script fails with Android NDK for some targets
           # Create a jemalloc stub library similar to the iOS approach
           mkdir -p /tmp/jemalloc-stub
