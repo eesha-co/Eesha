@@ -13,6 +13,7 @@ env:
 
 jobs:
   build-linux:
+    name: Linux (x86_64)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -23,8 +24,7 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.8
 
-      # https://github.com/servo/servo/blob/a0730d7154e183a9b2d9a9282061e6c67d87a263/.github/workflows/linux.yml#L141
-      - name: Set LIBCLANG_PATH # This is needed for bindgen in mozangle.
+      - name: Set LIBCLANG_PATH
         run: echo "LIBCLANG_PATH=/usr/lib/llvm-14/lib" >> $GITHUB_ENV
 
       - name: Install dependencies
@@ -64,6 +64,7 @@ jobs:
           path: ./eesha-x86_64-unknown-linux-gnu.tar.gz
 
   build-windows:
+    name: Windows (x86_64)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,8 +106,6 @@ jobs:
           Copy-Item target\release\eesha.exe eesha-release\
           Copy-Item -Recurse -Force resources eesha-release\resources
           Copy-Item -Recurse -Force icons eesha-release\icons
-          # Copy ANGLE DLLs (libEGL.dll, libGLESv2.dll) from build output
-          # These are needed for OpenGL ES rendering on Windows via ANGLE
           Get-ChildItem -Path "target\release\build" -Recurse -Filter "libEGL.dll" | ForEach-Object { Copy-Item $_.FullName eesha-release\ }
           Get-ChildItem -Path "target\release\build" -Recurse -Filter "libGLESv2.dll" | ForEach-Object { Copy-Item $_.FullName eesha-release\ }
           cd eesha-release
@@ -118,13 +117,16 @@ jobs:
           name: eesha-x86_64-pc-windows-msvc
           path: ./eesha-x86_64-pc-windows-msvc.tar.gz
 
-  build-mac:
+  build-macos:
+    name: macOS (${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: aarch64-apple-darwin
+            display: ARM
           - target: x86_64-apple-darwin
+            display: Intel
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -153,6 +155,8 @@ jobs:
         env:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
+          PATH: "/Library/Frameworks/GStreamer.framework/Versions/1.0/bin:${PATH}"
+          DYLD_LIBRARY_PATH: "/Library/Frameworks/GStreamer.framework/Versions/1.0/lib"
         run: cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release
 
       - name: Make archive
@@ -169,12 +173,174 @@ jobs:
           name: eesha-${{ matrix.target }}
           path: ./eesha-${{ matrix.target }}.tar.gz
 
+  build-android:
+    name: Android (${{ matrix.abi }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-linux-android
+          - armv7-linux-androideabi
+          - x86_64-linux-android
+        include:
+          - target: aarch64-linux-android
+            abi: arm64-v8a
+          - target: armv7-linux-androideabi
+            abi: armeabi-v7a
+          - target: x86_64-linux-android
+            abi: x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dsherret/rust-toolchain-file@v1
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.8
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r28b
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install build-essential python3-pip clang cmake curl \
+            g++ git gperf libdbus-1-dev libfreetype6-dev libgl1-mesa-dri \
+            libgles2-mesa-dev libglib2.0-dev libharfbuzz-dev liblzma-dev \
+            libssl-dev libunwind-dev libvulkan1 libx11-dev \
+            libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxmu-dev libxmu6 libegl1-mesa-dev llvm-dev m4 xorg-dev \
+            python3-mako
+
+      - name: Set LIBCLANG_PATH
+        run: echo "LIBCLANG_PATH=/usr/lib/llvm-14/lib" >> $GITHUB_ENV
+
+      - name: Build native library
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          SCCACHE_GHA_ENABLED: true
+          RUSTC_WRAPPER: sccache
+        run: |
+          # Set up NDK toolchain for cargo
+          mkdir -p .cargo
+          cat >> .cargo/config.toml << EOF
+          [target.${{ matrix.target }}]
+          linker = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang"
+          ar = "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          EOF
+
+          # Set CC/CXX for jemalloc and other C/C++ dependencies
+          export CC="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang"
+          export CXX="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.target }}${{ matrix.target == 'armv7-linux-androideabi' && 'e' || '' }}24-clang++"
+          export AR="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          export CFLAGS="-D__ANDROID_API__=24"
+          export CXXFLAGS="-D__ANDROID_API__=24"
+
+          # Build the Rust library for Android
+          cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
+
+      - name: Prepare APK native libs
+        run: |
+          mkdir -p support/android/apk/servoapp/src/main/jniLibs/${{ matrix.abi }}
+          cp target/${{ matrix.target }}/release/libeesha.so support/android/apk/servoapp/src/main/jniLibs/${{ matrix.abi }}/
+
+      - name: Build APK
+        working-directory: support/android/apk
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease -Pandroid.nativeLibsDirectory=src/main/jniLibs
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: eesha-${{ matrix.abi }}-android
+          path: support/android/apk/servoapp/build/outputs/apk/release/*.apk
+
+      - name: Make archive
+        run: |
+          cp target/${{ matrix.target }}/release/libeesha.so .
+          tar -czvf eesha-${{ matrix.target }}.tar.gz libeesha.so
+
+      - name: Upload native library
+        uses: actions/upload-artifact@v4
+        with:
+          name: eesha-${{ matrix.target }}-lib
+          path: eesha-${{ matrix.target }}.tar.gz
+
+  build-ios:
+    name: iOS (${{ matrix.target }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-apple-ios
+          - aarch64-apple-ios-sim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dsherret/rust-toolchain-file@v1
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.8
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install mako
+        run: python -m pip install mako
+
+      - name: Install dependencies
+        run: brew install cmake
+
+      - name: Build
+        env:
+          SCCACHE_GHA_ENABLED: true
+          RUSTC_WRAPPER: sccache
+        run: cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release
+
+      - name: Make archive
+        working-directory: ./target/${{ matrix.target }}/release
+        run: tar -czvf eesha-${{ matrix.target }}.tar.gz libeesha.a
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eesha-${{ matrix.target }}
+          path: ./target/${{ matrix.target }}/release/eesha-${{ matrix.target }}.tar.gz
+
   publish-release:
+    name: Publish Release
     runs-on: ubuntu-latest
     needs:
       - build-linux
       - build-windows
-      - build-mac
+      - build-macos
+      - build-android
+      - build-ios
+    if: always()
     steps:
       - uses: actions/checkout@v4
 
@@ -186,10 +352,20 @@ jobs:
           merge-multiple: true
           path: artifacts
 
+      - name: List artifacts
+        run: ls -la artifacts/
+
       - name: Publish release
         run: |
           RELEASE_TAG=eesha-v$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "eesha") | .version')
           git fetch --tags --quiet
           if ! git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}" ; then
-            gh release create ${RELEASE_TAG} ./artifacts/*.tar.gz
+            gh release create ${RELEASE_TAG} ./artifacts/*.tar.gz ./artifacts/*.apk --prerelease --title "Eesha $(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "eesha") | .version')" --notes "Eesha browser build for all platforms
+
+          ## Platforms
+          - **Linux** (x86_64) - tar.gz archive
+          - **Windows** (x86_64) - tar.gz archive with ANGLE DLLs
+          - **macOS** (ARM/Apple Silicon & Intel) - tar.gz archives
+          - **Android** (arm64-v8a, armeabi-v7a, x86_64) - APK files
+          - **iOS** (arm64 device & simulator) - static library archives"
           fi
