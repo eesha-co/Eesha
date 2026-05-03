@@ -422,7 +422,6 @@ jobs:
   build-ios:
     name: iOS (${{ matrix.target }})
     runs-on: macos-latest
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
