@@ -248,6 +248,7 @@ jobs:
       - name: Filter valid artifacts
         run: |
           mkdir -p valid-artifacts
+          # Copy files with known extensions
           find artifacts/ -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.apk" -o -name "*.tar.gz" \) | while read f; do
             SIZE=$(stat -c%s "$f" 2>/dev/null || echo 0)
             if [ "$SIZE" -gt 1024 ]; then
@@ -255,6 +256,15 @@ jobs:
               echo "Including: $(basename $f) (${SIZE} bytes)"
             else
               echo "Skipping (too small): $(basename $f) (${SIZE} bytes)"
+            fi
+          done
+          # Handle Windows portable exe (comes without extension)
+          find artifacts/ -type f ! -name "*.*" | while read f; do
+            SIZE=$(stat -c%s "$f" 2>/dev/null || echo 0)
+            if [ "$SIZE" -gt 10000000 ]; then
+              # Large file without extension is likely the Windows portable exe
+              cp "$f" "valid-artifacts/Eesha-0.2.0-portable.exe"
+              echo "Including (renamed): $(basename $f) → Eesha-0.2.0-portable.exe (${SIZE} bytes)"
             fi
           done
 
