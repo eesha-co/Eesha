@@ -452,9 +452,6 @@ jobs:
       - name: Install dependencies
         run: brew install cmake
 
-      - name: Update dependencies
-        run: cargo update
-
       - name: Build
         env:
           SCCACHE_GHA_ENABLED: true
@@ -478,9 +475,8 @@ jobs:
           export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
           export CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
 
-          # NOTE: surfman (Servo's GPU surface management library) does not natively
-          # support iOS. This build will likely fail at the surfman compilation step.
-          # iOS support requires upstream changes to surfman or a replacement surface library.
+          # NOTE: surfman iOS EAGL backend is provided by the eesha-co/surfman fork.
+          # The patch is configured in Cargo.toml [patch."https://github.com/servo/surfman"].
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
       - name: Make archive
