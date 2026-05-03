@@ -268,112 +268,103 @@ jobs:
           echo "linker = \"${CLANG_BIN}\"" >> .cargo/config.toml
           echo "ar = \"${NDK_BIN}/llvm-ar\"" >> .cargo/config.toml
 
-          # Set CC/CXX for C/C++ dependencies
-          export CC="${CLANG_BIN}"
-          export CXX="${CLANGXX_BIN}"
-          export AR="${NDK_BIN}/llvm-ar"
-          export RANLIB="${NDK_BIN}/llvm-ranlib"
+          # CRITICAL FIX: Only use TARGET-SPECIFIC env vars for CC/CXX/AR.
+          # Do NOT set global CC/CXX as this breaks HOST C compilation
+          # (e.g., glslopt's build script compiles C for the HOST, and
+          # global CC would make it use the Android cross-compiler instead).
+          CARGO_TARGET=$(echo "${{ matrix.target }}" | tr '-' '_')
+          export "CC_${CARGO_TARGET}"="${CLANG_BIN}"
+          export "CXX_${CARGO_TARGET}"="${CLANGXX_BIN}"
+          export "AR_${CARGO_TARGET}"="${NDK_BIN}/llvm-ar"
+          export "RANLIB_${CARGO_TARGET}"="${NDK_BIN}/llvm-ranlib"
+
+          # Set target-specific CFLAGS/CXXFLAGS (not global!)
+          export "CFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
+          export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
+          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${TOOL_PREFIX} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
 
           # Use NDK cmake toolchain file for Android cmake builds (aws-lc-sys)
           export CMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
-          # Pass Android-specific cmake variables via CMAKE_ARGS
           export CMAKE_ARGS="-DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-${ANDROID_API} -DANDROID_NDK=${ANDROID_NDK_ROOT}"
 
-          # Set sysroot and include paths for bindgen (needed by aws-lc-sys / rustls)
-          NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-          export CFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
-          export CXXFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT}"
-          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${TOOL_PREFIX} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
-          # Set target-specific CC/CXX env vars for cargo (convert hyphens to underscores)
-          CARGO_TARGET=$(echo "${{ matrix.target }}" | tr '-' '_')
-          export CC_${CARGO_TARGET}="${CC}"
-          export CXX_${CARGO_TARGET}="${CXX}"
-          export AR_${CARGO_TARGET}="${AR}"
-
           # Create stub libraries for pkg-config-dependent crates
-          # fontconfig, freetype2, expat are needed by yeslogic-fontconfig-sys
+          # Use NDK compiler directly (not $CC which isn't set globally)
           mkdir -p /tmp/android-stubs
-          # Create fontconfig stub
           echo 'void FcInit() {} void FcFini() {} void FcGetVersion() {} void FcConfigGetCurrent() {} void FcConfigAppFontAddFile() {} void FcConfigAppFontAddDir() {} void FcConfigSubstitute() {} void FcDefaultSubstitute() {} void FcFontMatch() {} void FcFontSort() {} void FcPatternCreate() {} void FcPatternDestroy() {} void FcPatternAddString() {} void FcPatternAddInteger() {} void FcPatternAddDouble() {} void FcPatternAddBool() {} void FcPatternGetString() {} void FcPatternGetInteger() {} void FcPatternGetDouble() {} void FcPatternGetBool() {} void FcFontSetCreate() {} void FcFontSetDestroy() {} void FcFontSetAdd() {} void FcObjectSetCreate() {} void FcObjectSetAdd() {} void FcObjectSetDestroy() {} void FcFontList() {} void FcNameParse() {} void FcNameUnparse() {} void FcStrFree() {} void FcStrSetCreate() {} void FcStrSetDestroy() {} void FcStrSetAdd() {} void FcStrSetAddFilename() {} void FcStrListCreate() {} void FcStrListNext() {} void FcStrListDone() {} void FcConfigParseAndLoad() {} void FcConfigBuildFonts() {} void FcInitReinitialize() {} void FcInitBringUptoDate() {} void FcGetResult() {} void FcPatternFormat() {} void FcPatternDuplicate() {} void FcPatternFilter() {} void FcPatternReference() {} void FcValueDestroy() {} void FcValueSave() {} void FcCharSetCreate() {} void FcCharSetDestroy() {} void FcCharSetAddChar() {} void FcCharSetHasChar() {} void FcCharSetCount() {} void FcCharSetIntersect() {} void FcCharSetUnion() {} void FcCharSetSubtract() {} void FcLangSetCreate() {} void FcLangSetDestroy() {} void FcLangSetAdd() {} void FcLangSetHasLang() {} void FcConfigGetFonts() {} void FcConfigGetConfigDirs() {} void FcConfigGetFontDirs() {} void FcConfigGetRescanInterval() {} void FcConfigSetRescanInterval() {} void FcConfigGetConfigFiles() {} void FcConfigGetCacheDirs() {} void FcConfigHomeDir() {} void FcConfigEnableHome() {} void FcConfigFilename() {} void FcConfigAppFontClear() {}' > /tmp/android-stubs/fontconfig.c
-          ${CC} -c -o /tmp/android-stubs/fontconfig.o /tmp/android-stubs/fontconfig.c
-          ${AR} rcs /tmp/android-stubs/libfontconfig.a /tmp/android-stubs/fontconfig.o
-          # Create freetype2 stub
+          ${CLANG_BIN} -c -o /tmp/android-stubs/fontconfig.o /tmp/android-stubs/fontconfig.c
+          ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libfontconfig.a /tmp/android-stubs/fontconfig.o
           echo 'void FT_Init_FreeType() {} void FT_Done_FreeType() {} void FT_New_Face() {} void FT_Done_Face() {} void FT_New_Memory_Face() {} void FT_Open_Face() {} void FT_Attach_File() {} void FT_Attach_Stream() {} void FT_Reference_Face() {} void FT_Set_Char_Size() {} void FT_Set_Pixel_Sizes() {} void FT_Load_Glyph() {} void FT_Load_Char() {} void FT_Render_Glyph() {} void FT_Get_Kerning() {} void FT_Get_Track_Kerning() {} void FT_Get_Glyph_Name() {} void FT_Get_Postscript_Name() {} void FT_Select_Charmap() {} void FT_Set_Charmap() {} void FT_Get_Charmap_Index() {} void FT_Get_CMap_Language_ID() {} void FT_Get_CMap_Format() {} void FT_Get_First_Char() {} void FT_Get_Next_Char() {} void FT_Get_Name_Index() {} void FT_Set_Transform() {} void FT_Get_Transform() {} void FT_Glyph_Copy() {} void FT_Get_Advance() {} void FT_Library_Version() {} void FT_Face_CheckTrueTypePatents() {} void FT_Face_SetUnpatentedHinting() {}' > /tmp/android-stubs/freetype.c
-          ${CC} -c -o /tmp/android-stubs/freetype.o /tmp/android-stubs/freetype.c
-          ${AR} rcs /tmp/android-stubs/libfreetype.a /tmp/android-stubs/freetype.o
-          # Create expat stub
+          ${CLANG_BIN} -c -o /tmp/android-stubs/freetype.o /tmp/android-stubs/freetype.c
+          ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libfreetype.a /tmp/android-stubs/freetype.o
           echo 'void XML_ParserCreate() {} void XML_ParserCreateNS() {} void XML_ParserCreate_MM() {} void XML_ParserFree() {} void XML_Parse() {} void XML_SetElementHandler() {} void XML_SetCharacterDataHandler() {} void XML_SetProcessingInstructionHandler() {} void XML_SetCommentHandler() {} void XML_SetStartCdataSectionHandler() {} void XML_SetEndCdataSectionHandler() {} void XML_SetDefaultHandler() {} void XML_SetDefaultHandlerExpand() {} void XML_SetUnparsedEntityDeclHandler() {} void XML_SetNotationDeclHandler() {} void XML_SetNamespaceDeclHandler() {} void XML_SetStartNamespaceDeclHandler() {} void XML_SetEndNamespaceDeclHandler() {} void XML_SetXmlDeclHandler() {} void XML_SetAttlistDeclHandler() {} void XML_SetEntityDeclHandler() {} void XML_SetDoctypeDeclHandler() {} void XML_SetElementDeclHandler() {} void XML_SetUserData() {} void XML_GetUserData() {} void XML_SetEncoding() {} void XML_UseForeignDTD() {} void XML_SetReturnNSTriplet() {} void XML_GetErrorCode() {} void XML_ErrorString() {} void XML_GetCurrentLineNumber() {} void XML_GetCurrentColumnNumber() {} void XML_GetCurrentByteIndex() {} void XML_GetCurrentByteCount() {} void XML_GetInputContext() {} void XML_SetBase() {} void XML_GetBase() {}' > /tmp/android-stubs/expat.c
-          ${CC} -c -o /tmp/android-stubs/expat.o /tmp/android-stubs/expat.c
-          ${AR} rcs /tmp/android-stubs/libexpat.a /tmp/android-stubs/expat.o
+          ${CLANG_BIN} -c -o /tmp/android-stubs/expat.o /tmp/android-stubs/expat.c
+          ${NDK_BIN}/llvm-ar rcs /tmp/android-stubs/libexpat.a /tmp/android-stubs/expat.o
 
-          # Create a custom pkg-config wrapper for Android cross-compilation
-          # This handles all pkg-config queries and returns our stub paths
+          # Custom pkg-config wrapper for Android cross-compilation
           mkdir -p /tmp/android-stubs/bin
-          echo '#!/bin/bash' > /tmp/android-stubs/bin/pkg-config
-          echo 'case "$1" in' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --libs)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    case "$2" in' >> /tmp/android-stubs/bin/pkg-config
-          echo '      fontconfig) echo "-L/tmp/android-stubs -lfontconfig -lfreetype -lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      freetype2) echo "-L/tmp/android-stubs -lfreetype" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      expat) echo "-L/tmp/android-stubs -lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      x11) echo "-L/tmp/android-stubs -lX11" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xext) echo "-L/tmp/android-stubs -lXext" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xcursor) echo "-L/tmp/android-stubs -lXcursor" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xi) echo "-L/tmp/android-stubs -lXi" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xrender) echo "-L/tmp/android-stubs -lXrender" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xrandr) echo "-L/tmp/android-stubs -lXrandr" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xcb) echo "-L/tmp/android-stubs -lxcb" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xcb-render) echo "-L/tmp/android-stubs -lxcb-render" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      xcb-shm) echo "-L/tmp/android-stubs -lxcb-shm" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      *) echo "-L/tmp/android-stubs" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '    esac ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --cflags)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    echo "-I/tmp/android-stubs/include" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --exists)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    exit 0 ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --atleast-version)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    exit 0 ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --modversion)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    echo "1.0" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --libs-only-l)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    case "$2" in' >> /tmp/android-stubs/bin/pkg-config
-          echo '      fontconfig) echo "-lfontconfig -lfreetype -lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      freetype2) echo "-lfreetype" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      expat) echo "-lexpat" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      x11) echo "-lX11" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '      *) echo "" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '    esac ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --libs-only-L)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    echo "-L/tmp/android-stubs" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --libs-only-other)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    echo "" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --cflags-only-I)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    echo "-I/tmp/android-stubs/include" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  --cflags-only-other)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    echo "" ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo '  *)' >> /tmp/android-stubs/bin/pkg-config
-          echo '    /usr/bin/pkg-config "$@" 2>/dev/null || true ;;' >> /tmp/android-stubs/bin/pkg-config
-          echo 'esac' >> /tmp/android-stubs/bin/pkg-config
+          cat > /tmp/android-stubs/bin/pkg-config << 'PKGEOF'
+          #!/bin/bash
+          case "$1" in
+            --libs)
+              case "$2" in
+                fontconfig) echo "-L/tmp/android-stubs -lfontconfig -lfreetype -lexpat" ;;
+                freetype2) echo "-L/tmp/android-stubs -lfreetype" ;;
+                expat) echo "-L/tmp/android-stubs -lexpat" ;;
+                x11) echo "-L/tmp/android-stubs -lX11" ;;
+                xext) echo "-L/tmp/android-stubs -lXext" ;;
+                xcursor) echo "-L/tmp/android-stubs -lXcursor" ;;
+                xi) echo "-L/tmp/android-stubs -lXi" ;;
+                xrender) echo "-L/tmp/android-stubs -lXrender" ;;
+                xrandr) echo "-L/tmp/android-stubs -lXrandr" ;;
+                xcb) echo "-L/tmp/android-stubs -lxcb" ;;
+                xcb-render) echo "-L/tmp/android-stubs -lxcb-render" ;;
+                xcb-shm) echo "-L/tmp/android-stubs -lxcb-shm" ;;
+                *) echo "-L/tmp/android-stubs" ;;
+              esac ;;
+            --cflags)
+              echo "-I/tmp/android-stubs/include" ;;
+            --exists)
+              exit 0 ;;
+            --atleast-version)
+              exit 0 ;;
+            --modversion)
+              echo "1.0" ;;
+            --libs-only-l)
+              case "$2" in
+                fontconfig) echo "-lfontconfig -lfreetype -lexpat" ;;
+                freetype2) echo "-lfreetype" ;;
+                expat) echo "-lexpat" ;;
+                x11) echo "-lX11" ;;
+                *) echo "" ;;
+              esac ;;
+            --libs-only-L)
+              echo "-L/tmp/android-stubs" ;;
+            --libs-only-other)
+              echo "" ;;
+            --cflags-only-I)
+              echo "-I/tmp/android-stubs/include" ;;
+            --cflags-only-other)
+              echo "" ;;
+            *)
+              /usr/bin/pkg-config "$@" 2>/dev/null || true ;;
+          esac
+          PKGEOF
           chmod +x /tmp/android-stubs/bin/pkg-config
           export PKG_CONFIG=/tmp/android-stubs/bin/pkg-config
           export PKG_CONFIG_ALLOW_CROSS=1
-          # Create include stub directory for headers
           mkdir -p /tmp/android-stubs/include/fontconfig /tmp/android-stubs/include/freetype2/freetype /tmp/android-stubs/include/expat
           echo 'typedef void* FcConfig; typedef void* FcPattern; typedef void* FcFontSet; typedef void* FcObjectSet; typedef void* FcCharSet; typedef void* FcLangSet; typedef void* FcStrSet; typedef void* FcStrList; typedef void* FcResult; typedef int FcBool; typedef int FcMatchKind; typedef void* FcValue; #define FcTrue 1 #define FcFalse 0' > /tmp/android-stubs/include/fontconfig/fontconfig.h
           echo 'typedef void* FT_Library; typedef void* FT_Face; typedef void* FT_GlyphSlot; typedef void* FT_Size; typedef void* FT_CharMap; typedef int FT_Error; typedef int FT_Bool; typedef int FT_Long; typedef int FT_Int; typedef unsigned int FT_UInt; typedef int FT_F26Dot6;' > /tmp/android-stubs/include/freetype2/freetype/freetype.h
           echo 'typedef void* XML_Parser; typedef void* XML_StartElementHandler; typedef void* XML_EndElementHandler; typedef void* XML_CharacterDataHandler;' > /tmp/android-stubs/include/expat/expat.h
 
-          # jemalloc's configure script fails with Android NDK for some targets
-          # Create a jemalloc stub library similar to the iOS approach
+          # jemalloc stub for Android
           mkdir -p /tmp/jemalloc-stub
           printf 'void je_mallocx() {}\nvoid je_dallocx() {}\nvoid je_nallocx() {}\nvoid je_rallocx() {}\nvoid je_sallocx() {}\nvoid je_mallctl() {}\nvoid je_mallctlnametomib() {}\nvoid je_mallctlbymib() {}\nvoid je_malloc_stats_print() {}\nvoid je_malloc_usable_size() {}\n' > /tmp/jemalloc-stub/jemalloc.c
-          ${CC} -c -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
-          ${AR} rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
+          ${CLANG_BIN} -c -o /tmp/jemalloc-stub/jemalloc.o /tmp/jemalloc-stub/jemalloc.c
+          ${NDK_BIN}/llvm-ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
           # Build the Rust library for Android
-          # Use --no-default-features to disable bluetooth and background_hang_monitor
-          # openssl-sys with vendored feature will build OpenSSL from source using the NDK
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --lib --no-default-features
 
       - name: Prepare APK native libs
@@ -407,6 +398,7 @@ jobs:
   build-ios:
     name: iOS (${{ matrix.target }})
     runs-on: macos-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -457,168 +449,19 @@ jobs:
           ar rcs /tmp/jemalloc-stub/libjemalloc.a /tmp/jemalloc-stub/jemalloc.o
           export JEMALLOC_OVERRIDE=/tmp/jemalloc-stub/libjemalloc.a
 
-          # X11 doesn't exist on iOS - create stub libraries for the x11 crate
-          mkdir -p /tmp/x11-stub
-          printf 'void XOpenDisplay() {}\nvoid XCloseDisplay() {}\nvoid XCreateWindow() {}\nvoid XDestroyWindow() {}\nvoid XMapWindow() {}\nvoid XUnmapWindow() {}\nvoid XFlush() {}\nvoid XSync() {}\nvoid XGetGeometry() {}\nvoid XCreateGC() {}\nvoid XFreeGC() {}\nvoid XDrawRectangle() {}\nvoid XFillRectangle() {}\nvoid XDrawLine() {}\nvoid XDrawString() {}\nvoid XSetForeground() {}\nvoid XSetBackground() {}\nvoid XSelectInput() {}\nvoid XNextEvent() {}\nvoid XSendEvent() {}\nvoid XPending() {}\nvoid XLookupKeysym() {}\nvoid XCreatePixmap() {}\nvoid XFreePixmap() {}\nvoid XCreateColormap() {}\nvoid XFreeColormap() {}\nvoid XInternAtom() {}\nvoid XSetWMProtocols() {}\nvoid XGetWMNormalHints() {}\nvoid XSetWMNormalHints() {}\nvoid XChangeProperty() {}\nvoid XGrabServer() {}\nvoid XUngrabServer() {}\nvoid XGetInputFocus() {}\nvoid XSetInputFocus() {}\nvoid XWarpPointer() {}\nvoid XQueryTree() {}\nvoid XTranslateCoordinates() {}\nvoid XGetWindowAttributes() {}\nvoid XChangeWindowAttributes() {}\nvoid XConfigureWindow() {}\nvoid XMoveResizeWindow() {}\nvoid XResizeWindow() {}\nvoid XMoveWindow() {}\nvoid XRaiseWindow() {}\nvoid XLowerWindow() {}\nvoid XRestackWindows() {}\nvoid XIconifyWindow() {}\nvoid XReparentWindow() {}\nvoid XkbGetMap() {}\nvoid XkbFreeKeyboard() {}\nvoid XrmInitialize() {}\nvoid XOpenIM() {}\nvoid XCloseIM() {}\nvoid XCreateIC() {}\nvoid XDestroyIC() {}\nvoid XSetICFocus() {}\nvoid XUnsetICFocus() {}\nvoid XFilterEvent() {}\nvoid XmbLookupString() {}\nvoid Xutf8LookupString() {}\nvoid XConvertSelection() {}\nvoid XSetSelectionOwner() {}\nvoid XGetSelectionOwner() {}\nvoid XScreenOfDisplay() {}\nvoid XDefaultScreen() {}\nvoid XDefaultRootWindow() {}\nvoid XDefaultVisual() {}\nvoid XDefaultDepth() {}\nvoid XDefaultScreenOfDisplay() {}\nvoid XDisplayWidth() {}\nvoid XDisplayHeight() {}\nvoid XConnectionNumber() {}\nvoid XInitExtension() {}\nvoid XShmQueryVersion() {}\nvoid XShmCreateImage() {}\nvoid XShmDetach() {}\nvoid XShmAttach() {}\nvoid XRenderQueryVersion() {}\nvoid XRenderFindVisualFormat() {}\nvoid XRenderCreatePicture() {}\nvoid XRenderFreePicture() {}\nvoid XRenderFillRectangle() {}\nvoid XRenderComposite() {}\nvoid XRenderSetPictureClipRectangles() {}\n' > /tmp/x11-stub/x11.c
-          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/x11.o /tmp/x11-stub/x11.c
-          ar rcs /tmp/x11-stub/libX11.a /tmp/x11-stub/x11.o
+          # Set up iOS link flags
+          export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
+          export CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -C link-arg=-framework -C link-arg=UIKit -C link-arg=-framework -C link-arg=OpenGLES"
 
-          # Create Xext stub
-          printf 'void XShmGetImage() {}\nvoid XShmPutImage() {}\nvoid XShmCreatePixmap() {}\nvoid XMITMiscGetBugMode() {}\nvoid XMITMiscSetBugMode() {}\n' > /tmp/x11-stub/xext.c
-          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xext.o /tmp/x11-stub/xext.c
-          ar rcs /tmp/x11-stub/libXext.a /tmp/x11-stub/xext.o
-
-          # Create Xcursor stub
-          printf 'void XcursorLibraryLoadCursor() {}\nvoid XcursorShapeLoadCursor() {}\nvoid XcursorImageCreate() {}\nvoid XcursorImageDestroy() {}\nvoid XcursorImageLoadCursor() {}\n' > /tmp/x11-stub/xcursor.c
-          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xcursor.o /tmp/x11-stub/xcursor.c
-          ar rcs /tmp/x11-stub/libXcursor.a /tmp/x11-stub/xcursor.o
-
-          # Create Xi stub
-          printf 'void XISelectEvents() {}\nvoid XIQueryDevice() {}\nvoid XIFreeDeviceInfo() {}\nvoid XIQueryVersion() {}\n' > /tmp/x11-stub/xi.c
-          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xi.o /tmp/x11-stub/xi.c
-          ar rcs /tmp/x11-stub/libXi.a /tmp/x11-stub/xi.o
-
-          # Create Xrender stub
-          printf 'void XRenderQueryExtension() {}\nvoid XRenderQueryFormats() {}\n' > /tmp/x11-stub/xrender.c
-          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xrender.o /tmp/x11-stub/xrender.c
-          ar rcs /tmp/x11-stub/libXrender.a /tmp/x11-stub/xrender.o
-
-          # Create Xrandr stub
-          printf 'void XRRGetScreenInfo() {}\nvoid XRRConfigCurrentConfiguration() {}\nvoid XRRConfigCurrentRate() {}\nvoid XRRConfigRates() {}\nvoid XRRConfigSizes() {}\nvoid XRRFreeConfigInfo() {}\nvoid XRRQueryExtension() {}\nvoid XRRQueryVersion() {}\nvoid XRRGetScreenSizeRange() {}\nvoid XRRSetScreenSize() {}\nvoid XRRGetScreenResources() {}\nvoid XRRFreeScreenResources() {}\nvoid XRRGetOutputInfo() {}\nvoid XRRFreeOutputInfo() {}\nvoid XRRGetCrtcInfo() {}\nvoid XRRFreeCrtcInfo() {}\nvoid XRRSetCrtcConfig() {}\n' > /tmp/x11-stub/xrandr.c
-          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/xrandr.o /tmp/x11-stub/xrandr.c
-          ar rcs /tmp/x11-stub/libXrandr.a /tmp/x11-stub/xrandr.o
-
-          # Create GLX stub
-          printf 'void glXCreateContext() {}\nvoid glXDestroyContext() {}\nvoid glXMakeCurrent() {}\nvoid glXSwapBuffers() {}\nvoid glXChooseVisual() {}\nvoid glXQueryExtension() {}\nvoid glXQueryVersion() {}\nvoid glXGetConfig() {}\nvoid glXGetCurrentContext() {}\nvoid glXGetCurrentDrawable() {}\nvoid glXCreateNewContext() {}\nvoid glXCreateWindow() {}\nvoid glXDestroyWindow() {}\nvoid glXGetVisualFromFBConfig() {}\nvoid glXChooseFBConfig() {}\nvoid glXGetFBConfigAttrib() {}\nvoid glXQueryExtensionsString() {}\n' > /tmp/x11-stub/glx.c
-          clang -c -target "$CLANG_TARGET" -isysroot "$SDK" -o /tmp/x11-stub/glx.o /tmp/x11-stub/glx.c
-          ar rcs /tmp/x11-stub/libGL.a /tmp/x11-stub/glx.o
-
-          # Create pkg-config directory for x11 stubs
-          mkdir -p /tmp/x11-stub/pkgconfig
-          cat > /tmp/x11-stub/pkgconfig/x11.pc << 'PCEOF'
-          prefix=/tmp/x11-stub
-          exec_prefix=${prefix}
-          libdir=${exec_prefix}
-          includedir=${prefix}/include
-          Name: X11
-          Description: X11 stub for iOS
-          Version: 1.0
-          Libs: -L${libdir} -lX11
-          Cflags: -I${includedir}
-          PCEOF
-          cat > /tmp/x11-stub/pkgconfig/xext.pc << 'PCEOF'
-          prefix=/tmp/x11-stub
-          exec_prefix=${prefix}
-          libdir=${exec_prefix}
-          includedir=${prefix}/include
-          Name: Xext
-          Description: Xext stub for iOS
-          Version: 1.0
-          Libs: -L${libdir} -lXext
-          Cflags: -I${includedir}
-          PCEOF
-          cat > /tmp/x11-stub/pkgconfig/xcursor.pc << 'PCEOF'
-          prefix=/tmp/x11-stub
-          exec_prefix=${prefix}
-          libdir=${exec_prefix}
-          includedir=${prefix}/include
-          Name: Xcursor
-          Description: Xcursor stub for iOS
-          Version: 1.0
-          Libs: -L${libdir} -lXcursor
-          Cflags: -I${includedir}
-          PCEOF
-          cat > /tmp/x11-stub/pkgconfig/xi.pc << 'PCEOF'
-          prefix=/tmp/x11-stub
-          exec_prefix=${prefix}
-          libdir=${exec_prefix}
-          includedir=${prefix}/include
-          Name: Xi
-          Description: Xi stub for iOS
-          Version: 1.0
-          Libs: -L${libdir} -lXi
-          Cflags: -I${includedir}
-          PCEOF
-          cat > /tmp/x11-stub/pkgconfig/xrender.pc << 'PCEOF'
-          prefix=/tmp/x11-stub
-          exec_prefix=${prefix}
-          libdir=${exec_prefix}
-          includedir=${prefix}/include
-          Name: Xrender
-          Description: Xrender stub for iOS
-          Version: 1.0
-          Libs: -L${libdir} -lXrender
-          Cflags: -I${includedir}
-          PCEOF
-          cat > /tmp/x11-stub/pkgconfig/xrandr.pc << 'PCEOF'
-          prefix=/tmp/x11-stub
-          exec_prefix=${prefix}
-          libdir=${exec_prefix}
-          includedir=${prefix}/include
-          Name: Xrandr
-          Description: Xrandr stub for iOS
-          Version: 1.0
-          Libs: -L${libdir} -lXrandr
-          Cflags: -I${includedir}
-          PCEOF
-
-          # Create a custom pkg-config wrapper that returns our stub values
-          # This is needed because the system pkg-config on macOS doesn't support iOS cross-compilation
-          mkdir -p /tmp/x11-stub/bin
-          echo '#!/bin/bash' > /tmp/x11-stub/bin/pkg-config
-          echo 'case "$1" in' >> /tmp/x11-stub/bin/pkg-config
-          echo '  --libs)' >> /tmp/x11-stub/bin/pkg-config
-          echo '    case "$2" in' >> /tmp/x11-stub/bin/pkg-config
-          echo '      x11) echo "-L/tmp/x11-stub -lX11" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xext) echo "-L/tmp/x11-stub -lXext" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xcursor) echo "-L/tmp/x11-stub -lXcursor" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xi) echo "-L/tmp/x11-stub -lXi" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xrender) echo "-L/tmp/x11-stub -lXrender" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xrandr) echo "-L/tmp/x11-stub -lXrandr" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      gl) echo "-L/tmp/x11-stub -lGL" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      *) echo "-L/tmp/x11-stub" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '    esac ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '  --cflags)' >> /tmp/x11-stub/bin/pkg-config
-          echo '    echo "-I/tmp/x11-stub/include" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '  --exists)' >> /tmp/x11-stub/bin/pkg-config
-          echo '    exit 0 ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '  --modversion)' >> /tmp/x11-stub/bin/pkg-config
-          echo '    echo "1.0" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '  --libs-only-l)' >> /tmp/x11-stub/bin/pkg-config
-          echo '    case "$2" in' >> /tmp/x11-stub/bin/pkg-config
-          echo '      x11) echo "-lX11" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xext) echo "-lXext" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xcursor) echo "-lXcursor" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xi) echo "-lXi" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xrender) echo "-lXrender" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      xrandr) echo "-lXrandr" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      gl) echo "-lGL" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '      *) echo "" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '    esac ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '  --libs-only-L)' >> /tmp/x11-stub/bin/pkg-config
-          echo '    echo "-L/tmp/x11-stub" ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo '  *)' >> /tmp/x11-stub/bin/pkg-config
-          echo '    /usr/bin/pkg-config "$@" 2>/dev/null || true ;;' >> /tmp/x11-stub/bin/pkg-config
-          echo 'esac' >> /tmp/x11-stub/bin/pkg-config
-          chmod +x /tmp/x11-stub/bin/pkg-config
-          export PKG_CONFIG=/tmp/x11-stub/bin/pkg-config
-
-          # Create X11 include headers for the Rust x11 crate
-          mkdir -p /tmp/x11-stub/include/X11
-          printf '#ifndef X11_STUB_H\n#define X11_STUB_H\ntypedef void* Display;\ntypedef unsigned long Window;\ntypedef unsigned long Drawable;\ntypedef unsigned long Pixmap;\ntypedef unsigned long Colormap;\ntypedef unsigned long Cursor;\ntypedef unsigned long VisualID;\ntypedef void* Visual;\ntypedef void* Screen;\ntypedef void* GC;\ntypedef int Bool;\ntypedef int Status;\ntypedef void* XImage;\ntypedef void* XSetWindowAttributes;\ntypedef void* XWindowAttributes;\ntypedef void* XEvent;\ntypedef void* Atom;\ntypedef void* XVisualInfo;\ntypedef void* XSizeHints;\ntypedef void* XWMHints;\ntypedef void* XTextProperty;\ntypedef void* XClassHint;\ntypedef void* XWMHints;\ntypedef int XKeyEvent;\ntypedef int XButtonEvent;\ntypedef int XMotionEvent;\ntypedef int XCrossingEvent;\ntypedef int XConfigureEvent;\ntypedef int XClientMessageEvent;\ntypedef int XSelectionEvent;\ntypedef int XPropertyEvent;\ntypedef int XDestroyWindowEvent;\ntypedef int XMapEvent;\ntypedef int XUnmapEvent;\ntypedef int XFocusChangeEvent;\ntypedef int XExposeEvent;\ntypedef int XVisibilityEvent;\ntypedef int XGravityEvent;\ntypedef int XReparentEvent;\ntypedef int XConfigureRequestEvent;\ntypedef int XMapRequestEvent;\ntypedef int XResizeRequestEvent;\ntypedef int XCirculateEvent;\ntypedef int XCirculateRequestEvent;\ntypedef int XColormapEvent;\ntypedef int XMappingEvent;\ntypedef int XSelectionClearEvent;\ntypedef int XSelectionRequestEvent;\ntypedef int XNoExposeEvent;\ntypedef unsigned long KeySym;\ntypedef unsigned long KeyCode;\n#define None 0L\n#define CopyFromParent 0L\n#define InputOutput 1\n#define InputOnly 2\n#define CWBackPixel (1L<<1)\n#define CWEventMask (1L<<11)\n#define StructureNotifyMask (1L<<16)\n#define SubstructureRedirectMask (1L<<20)\n#define SubstructureNotifyMask (1L<<19)\n#define ButtonPressMask (1L<<2)\n#define ButtonReleaseMask (1L<<3)\n#define PointerMotionMask (1L<<6)\n#define KeyPressMask (1L<<0)\n#define KeyReleaseMask (1L<<1)\n#define ExposureMask (1L<<15)\n#define FocusChangeMask (1L<<21)\n#define EnterWindowMask (1L<<4)\n#define LeaveWindowMask (1L<<5)\n#define PropertyChangeMask (1L<<22)\n#define VisibilityChangeMask (1L<<16)\n#endif\n' > /tmp/x11-stub/include/X11/Xlib.h
-
-          export C_INCLUDE_PATH=/tmp/x11-stub/include
-          export CFLAGS="-I/tmp/x11-stub/include"
-
-          export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -L /tmp/x11-stub"
-          export CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-framework -C link-arg=Foundation -L /tmp/x11-stub"
-
+          # NOTE: surfman (Servo's GPU surface management library) does not natively
+          # support iOS. This build will likely fail at the surfman compilation step.
+          # A proper iOS build requires patching surfman or implementing an iOS-specific
+          # rendering backend. This is tracked as a known issue.
           cargo build --target ${{ matrix.target }} --features embed-useragent-stylesheets --release --no-default-features
 
       - name: Make archive
         working-directory: ./target/${{ matrix.target }}/release
         run: |
-          # Create archive of the static library
           if [ -f libeesha.a ]; then
             tar -czvf eesha-${{ matrix.target }}.tar.gz libeesha.a
           else
@@ -668,5 +511,9 @@ jobs:
           - **Windows** (x86_64) - tar.gz archive with ANGLE DLLs
           - **macOS** (ARM/Apple Silicon & Intel) - tar.gz archives
           - **Android** (arm64-v8a, armeabi-v7a, x86_64) - APK files
-          - **iOS** (arm64 device & simulator) - static library archives"
+          - **iOS** (arm64 device & simulator) - static library archives (experimental)
+
+          ## Notes
+          - iOS builds are experimental. Servo's surfman library does not natively support iOS.
+          - For Android, each ABI has a separate APK."
           fi
