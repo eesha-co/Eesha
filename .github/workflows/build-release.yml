@@ -245,6 +245,10 @@ jobs:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
           OPENSSL_NO_VENDOR: "0"
+          # Set Android cmake vars as env vars (not just CMAKE_ARGS)
+          # The NDK cmake toolchain file reads these directly
+          ANDROID_ABI: ${{ matrix.abi }}
+          ANDROID_PLATFORM: android-21
         run: |
           NDK_BIN="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
@@ -252,18 +256,15 @@ jobs:
           NDK_LLVM_TARGET="${{ matrix.ndk_llvm_target }}"
 
           # Find the clang binary for this target.
-          # NDK r28b may not have target-specific symlinks for all architectures.
-          # Strategy: 1) Try target-specific binary, 2) Fall back to generic clang
+          # Strategy: 1) Try target-specific binary with API level, 
+          # 2) Try any target-specific binary, 3) Fall back to generic clang
           CLANG_BIN=$(ls ${NDK_BIN}/${NDK_LLVM_TARGET}${ANDROID_API}-clang 2>/dev/null || true)
           if [ -z "${CLANG_BIN}" ]; then
-            # Try any API level for this target
             CLANG_BIN=$(ls ${NDK_BIN}/${NDK_LLVM_TARGET}*-clang 2>/dev/null | head -1 || true)
           fi
           if [ -z "${CLANG_BIN}" ]; then
-            # Fall back to the generic NDK clang with --target flag
             echo "No target-specific clang found for ${NDK_LLVM_TARGET}, using generic clang"
             CLANG_BIN="${NDK_BIN}/clang"
-            # We'll pass --target via CFLAGS
             EXTRA_CC_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
             EXTRA_CXX_FLAGS="--target=${NDK_LLVM_TARGET}${ANDROID_API}"
           else
@@ -286,8 +287,6 @@ jobs:
 
           # CRITICAL: Only use TARGET-SPECIFIC env vars for CC/CXX/AR.
           # Do NOT set global CC/CXX as this breaks HOST C compilation
-          # (e.g., glslopt's build script compiles C for the HOST, and
-          # global CC would make it use the Android cross-compiler instead).
           CARGO_TARGET=$(echo "${{ matrix.target }}" | tr '-' '_')
           export "CC_${CARGO_TARGET}"="${CLANG_BIN}"
           export "CXX_${CARGO_TARGET}"="${CLANGXX_BIN}"
@@ -299,9 +298,10 @@ jobs:
           export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${EXTRA_CXX_FLAGS}"
           export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${NDK_LLVM_TARGET} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
 
-          # Use NDK cmake toolchain file for Android cmake builds (aws-lc-sys)
+          # Use NDK cmake toolchain file for cmake builds (aws-lc-sys)
           export CMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
-          export CMAKE_ARGS="-DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-${ANDROID_API} -DANDROID_NDK=${ANDROID_NDK_ROOT}"
+          # Also set target-specific CMAKE_TOOLCHAIN_FILE so aws-lc-sys's cc/cmake crate picks it up
+          export "CMAKE_TOOLCHAIN_FILE_${CARGO_TARGET}"="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
 
           # Create stub libraries for pkg-config-dependent crates
           mkdir -p /tmp/android-stubs
