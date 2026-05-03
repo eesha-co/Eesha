@@ -178,6 +178,8 @@ objc2-app-kit = { version = "0.2", features = [
   "NSResponder",
   "NSWindow",
 ] }
+# aws-lc-rs needs bindgen for iOS since pre-generated bindings aren't available
+aws-lc-rs = { version = "1", features = ["bindgen"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 winit = { version = "0.30", features = ["rwh_06", "android-game-activity"] }
