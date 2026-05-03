@@ -26,13 +26,22 @@ pub enum WidgetKind {
     /// URL bar (text input)
     UrlBar,
     /// Tab in the tab bar
-    Tab { index: usize },
+    Tab {
+        /// Index of the tab in the tab list
+        index: usize,
+    },
     /// Close button on a tab
-    TabClose { index: usize },
+    TabClose {
+        /// Index of the tab to close
+        index: usize,
+    },
     /// New tab button
     NewTabButton,
     /// Bookmark button in bookmark bar
-    BookmarkButton { index: usize },
+    BookmarkButton {
+        /// Index of the bookmark item
+        index: usize,
+    },
     /// Menu button (hamburger)
     MenuButton,
     /// Downloads button
