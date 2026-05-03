@@ -58,13 +58,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Rename Windows portable
+        working-directory: desktop/dist
+        shell: pwsh
+        run: |
+          # electron-builder portable creates a file without .exe extension sometimes
+          # Find and rename it
+          $portable = Get-ChildItem -File | Where-Object { $_.Extension -eq '' -and $_.Length -gt 10MB }
+          if ($portable) {
+            Rename-Item $portable.FullName "Eesha-0.2.0-portable.exe"
+            Write-Host "Renamed $($portable.Name) to Eesha-0.2.0-portable.exe"
+          }
+          # List all files
+          Get-ChildItem -File | ForEach-Object { Write-Host "$($_.Name) ($([math]::Round($_.Length/1MB,1))MB)" }
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: eesha-windows
           path: |
             desktop/dist/*.exe
-            desktop/dist/*.zip
 
   build-desktop-mac:
     name: Desktop (macOS)
