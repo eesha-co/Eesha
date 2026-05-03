@@ -517,23 +517,63 @@ jobs:
           path: artifacts
 
       - name: List artifacts
-        run: ls -la artifacts/
+        run: ls -laR artifacts/
+
+      - name: Filter valid artifacts
+        run: |
+          # Remove empty files and files smaller than 1KB (likely empty archives)
+          mkdir -p valid-artifacts
+          find artifacts/ -type f \( -name "*.tar.gz" -o -name "*.apk" \) | while read f; do
+            SIZE=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo 0)
+            if [ "$SIZE" -gt 1024 ]; then
+              cp "$f" valid-artifacts/
+              echo "✅ Including: $(basename $f) (${SIZE} bytes)"
+            else
+              echo "❌ Skipping (too small/empty): $(basename $f) (${SIZE} bytes)"
+            fi
+          done
+          echo "--- Valid artifacts ---"
+          ls -la valid-artifacts/
 
       - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_TAG=eesha-v$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "eesha") | .version')
+          RELEASE_TITLE="Eesha $(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "eesha") | .version')"
           git fetch --tags --quiet
-          if ! git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}" ; then
-            gh release create ${RELEASE_TAG} ./artifacts/*.tar.gz ./artifacts/*.apk --prerelease --title "Eesha $(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "eesha") | .version')" --notes "Eesha browser build for all platforms
+
+          # Collect list of valid artifact files
+          ARTIFACT_FILES=$(find valid-artifacts/ -type f \( -name "*.tar.gz" -o -name "*.apk" \) | sort)
+
+          if [ -z "$ARTIFACT_FILES" ]; then
+            echo "⚠️ No valid artifacts to upload"
+            exit 0
+          fi
+
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            echo "📌 Release ${RELEASE_TAG} already exists, uploading additional assets..."
+            for f in $ARTIFACT_FILES; do
+              ASSET_NAME=$(basename "$f")
+              echo "  Uploading: ${ASSET_NAME}"
+              gh release upload ${RELEASE_TAG} "$f" --clobber 2>/dev/null || echo "  ⚠️ Failed to upload ${ASSET_NAME}"
+            done
+          else
+            echo "🚀 Creating new release ${RELEASE_TAG}..."
+            # Create the release with all artifacts
+            gh release create ${RELEASE_TAG} $ARTIFACT_FILES --prerelease \
+              --title "${RELEASE_TITLE}" \
+              --notes "Eesha browser build for all platforms
 
           ## Platforms
           - **Linux** (x86_64) - tar.gz archive
           - **Windows** (x86_64) - tar.gz archive with ANGLE DLLs
           - **macOS** (ARM/Apple Silicon & Intel) - tar.gz archives
-          - **Android** (arm64-v8a, armeabi-v7a, x86_64) - APK files
-          - **iOS** (arm64 device & simulator) - static library archives (experimental)
+          - **Android** (arm64-v8a, armeabi-v7a, x86_64) - APK files and native libraries
+          - **iOS** (arm64 device & simulator) - static library archives
 
           ## Notes
-          - iOS builds are experimental. Servo's surfman library does not natively support iOS.
-          - For Android, each ABI has a separate APK."
+          - iOS builds use the eesha-co/surfman fork with EAGL backend support.
+          - For Android, each ABI has a separate APK and native library archive.
+          - This is a pre-release build. Not all platforms may be available yet."
           fi
