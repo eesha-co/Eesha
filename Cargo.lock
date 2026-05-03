@@ -7466,7 +7466,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "surfman"
 version = "0.12.0"
-source = "git+https://github.com/eesha-co/surfman?branch=main#f1ee61f1e88df2bf117a221043598c1e9fb7a692"
+source = "git+https://github.com/eesha-co/surfman?branch=main#dafb02aa0f88114aba44a8ad3cb660efcb1aa5d4"
 dependencies = [
  "bitflags 2.9.0",
  "cfg_aliases",
