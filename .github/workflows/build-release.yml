@@ -254,6 +254,7 @@ jobs:
           NDK_BIN="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
           ANDROID_API=21
+          export ANDROID_VERSION=21
           NDK_LLVM_TARGET="${{ matrix.ndk_llvm_target }}"
 
           # Find the clang binary for this target.
