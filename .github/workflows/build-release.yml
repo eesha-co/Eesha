@@ -248,13 +248,13 @@ jobs:
           # Set Android cmake vars as env vars - NDK cmake toolchain reads these
           ANDROID_ABI: ${{ matrix.abi }}
           ANDROID_PLATFORM: android-21
-          # mozjs_sys reads ANDROID_VERSION for --with-android-version configure flag
-          ANDROID_VERSION: "21"
+          # mozjs_sys reads ANDROID_API_LEVEL for --with-android-version in makefile.cargo
+          ANDROID_API_LEVEL: "21"
         run: |
           NDK_BIN="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
           ANDROID_API=21
-          export ANDROID_VERSION=21
+          export ANDROID_API_LEVEL=21
           NDK_LLVM_TARGET="${{ matrix.ndk_llvm_target }}"
 
           # Find the clang binary for this target.

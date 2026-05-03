@@ -188,3 +188,7 @@ lto = true
 # Note: `windows` and `unix` are built-in Rust cfg keys, no declaration needed.
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(linux)', 'cfg(macos)', 'cfg(ios)', 'cfg(android)', 'cfg(apple)'] }
+
+# Patch surfman to use the Eesha fork with iOS EAGL backend support
+[patch."https://github.com/servo/surfman"]
+surfman = { git = "https://github.com/eesha-co/surfman", branch = "main" }
