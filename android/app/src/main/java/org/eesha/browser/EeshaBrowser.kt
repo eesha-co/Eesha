@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.net.http.SslError
 import android.webkit.*
 import android.widget.EditText
 import android.widget.ImageButton
@@ -88,10 +89,7 @@ class EeshaBrowser : AppCompatActivity() {
             userAgentString = "Eesha/0.2.0 (Android) " + userAgentString
         }
 
-        // Enable WebView debugging in debug builds
-        if (BuildConfig.DEBUG) {
-            WebView.setWebContentsDebuggingEnabled(true)
-        }
+        // WebView debugging is auto-enabled for debuggable apps (debug builds)
 
         webView.webViewClient = EeshaWebViewClient()
         webView.webChromeClient = EeshaWebChromeClient()
