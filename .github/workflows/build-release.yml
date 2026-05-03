@@ -224,7 +224,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r28b
+          ndk-version: r26c
 
       - name: Install Linux dependencies
         run: |
