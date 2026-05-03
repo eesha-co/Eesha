@@ -294,9 +294,9 @@ jobs:
 
           # Set target-specific CFLAGS/CXXFLAGS with --target flag LAST so it overrides
           # any incorrect --target=<host> that the cc crate might add.
-          export "CFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${CLANG_TARGET_FLAG}"
-          export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} ${CLANG_TARGET_FLAG}"
-          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${NDK_LLVM_TARGET} -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
+          export "CFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include/c++/v1 ${CLANG_TARGET_FLAG}"
+          export "CXXFLAGS_${CARGO_TARGET}"="-U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API} --sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include/c++/v1 -stdlib=libc++ -std=c++17 ${CLANG_TARGET_FLAG}"
+          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${NDK_LLVM_TARGET} -I${NDK_SYSROOT}/usr/include/c++/v1 -U__ANDROID_API__ -D__ANDROID_API__=${ANDROID_API}"
 
           # Create a custom cmake toolchain wrapper that forces ANDROID_ABI and ANDROID_PLATFORM
           # The NDK cmake toolchain may not correctly read ANDROID_ABI from environment.
