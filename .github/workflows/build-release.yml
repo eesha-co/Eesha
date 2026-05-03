@@ -246,6 +246,7 @@ jobs:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
           OPENSSL_NO_VENDOR: "0"
+          OPENSSL_NO_ASM: "1"
           # Set Android cmake vars as env vars - NDK cmake toolchain reads these
           ANDROID_ABI: ${{ matrix.abi }}
           ANDROID_PLATFORM: android-21
