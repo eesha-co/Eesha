@@ -395,6 +395,7 @@ impl Window {
                 _allow_multiple_files,
                 ipc_sender,
             ) => {
+                #[cfg(not(any(target_os = "android", target_os = "ios")))]
                 if _allow_multiple_files {
                     rfd::FileDialog::new()
                         .pick_files()
@@ -423,6 +424,10 @@ impl Window {
                                 log::warn!("Eesha Panel failed to send files: {}", e);
                             }
                         });
+                }
+                #[cfg(any(target_os = "android", target_os = "ios"))]
+                {
+                    let _ = ipc_sender.send(None);
                 }
             }
             EmbedderMsg::ShowIME(_webview_id, input_method_type, text, multiline, position) => {

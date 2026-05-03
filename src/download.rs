@@ -168,29 +168,52 @@ pub(crate) async fn download_body(
         .unwrap_or_else(|| url.path_segments().unwrap().last().unwrap().to_string());
     let host = url.host().unwrap();
 
-    // Ask if user wants to download the file
-    if rfd::MessageDialogResult::No
-        == rfd::AsyncMessageDialog::new()
-            .set_buttons(rfd::MessageButtons::YesNo)
-            .set_description(format!("{host} wants to download file: {filename}"))
-            .set_title("Save File")
-            .show()
-            .await
+    // Ask if user wants to download the file and where to save it
+    // On Android/iOS, file dialogs are not available, so we auto-download
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
-        return;
+        if rfd::MessageDialogResult::No
+            == rfd::AsyncMessageDialog::new()
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .set_description(format!("{host} wants to download file: {filename}"))
+                .set_title("Save File")
+                .show()
+                .await
+        {
+            return;
+        }
+
+        let Some(file_handle) = rfd::AsyncFileDialog::new()
+            .set_file_name(&filename)
+            .save_file()
+            .await
+        else {
+            return;
+        };
+
+        let file_path = file_handle.path();
+        download_to_path(url, resp, eesha_internal_sender, filename, file_path).await;
     }
 
-    // Ask user for file path
-    let Some(file_handle) = rfd::AsyncFileDialog::new()
-        .set_file_name(&filename)
-        .save_file()
-        .await
-    else {
-        return;
-    };
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        // On mobile, auto-download to a standard location
+        let dir = directories::UserDirs::new()
+            .map(|d| d.download_dir().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("/tmp")))
+            .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
+        let file_path = dir.join(&filename);
+        download_to_path(url, resp, eesha_internal_sender, filename, file_path).await;
+    }
+}
 
-    // Handle the filepath. We create a temporary file with a timestamp suffix to avoid conflicts and mitigate the risk of out of disk space.
-    let file_path = file_handle.path();
+async fn download_to_path(
+    url: Url,
+    mut resp: reqwest::Response,
+    eesha_internal_sender: IpcSender<EeshaInternalMsg>,
+    filename: String,
+    file_path: std::path::PathBuf,
+) {
+    // Create a temporary file with a timestamp suffix to avoid conflicts
     let temp_file_path = file_path.with_file_name(format!(
         "{}_{}.eesha.tmp",
         filename,
