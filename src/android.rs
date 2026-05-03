@@ -60,7 +60,7 @@ impl ApplicationHandler<EventLoopProxyMessage> for App {
 
 /// Android main entry point.
 /// This is called by the NativeActivity when the app starts.
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn android_main(app: winit::platform::android::activity::AndroidApp) {
     init_crypto();
 
