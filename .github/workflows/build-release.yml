@@ -95,7 +95,7 @@ jobs:
           scoop install cmake
 
       - name: Upgrade LLVM
-        run: choco upgrade llvm -y
+        run: chko upgrade llvm -y
 
       - name: Build
         env:
@@ -245,10 +245,11 @@ jobs:
           SCCACHE_GHA_ENABLED: true
           RUSTC_WRAPPER: sccache
           OPENSSL_NO_VENDOR: "0"
-          # Set Android cmake vars as env vars (not just CMAKE_ARGS)
-          # The NDK cmake toolchain file reads these directly
+          # Set Android cmake vars as env vars - NDK cmake toolchain reads these
           ANDROID_ABI: ${{ matrix.abi }}
           ANDROID_PLATFORM: android-21
+          # mozjs_sys reads ANDROID_VERSION for --with-android-version configure flag
+          ANDROID_VERSION: "21"
         run: |
           NDK_BIN="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
@@ -300,7 +301,6 @@ jobs:
 
           # Use NDK cmake toolchain file for cmake builds (aws-lc-sys)
           export CMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
-          # Also set target-specific CMAKE_TOOLCHAIN_FILE so aws-lc-sys's cc/cmake crate picks it up
           export "CMAKE_TOOLCHAIN_FILE_${CARGO_TARGET}"="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
 
           # Create stub libraries for pkg-config-dependent crates
