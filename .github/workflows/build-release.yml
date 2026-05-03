@@ -266,6 +266,16 @@ jobs:
           # Set Android API level for OpenSSL vendored build
           export ANDROID_API=24
 
+          # Set sysroot and include paths for bindgen (needed by aws-lc-sys / rustls)
+          NDK_SYSROOT="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+          export CFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24 --sysroot=${NDK_SYSROOT}"
+          export CXXFLAGS="-U__ANDROID_API__ -D__ANDROID_API__=24 --sysroot=${NDK_SYSROOT}"
+          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=${NDK_SYSROOT} -I${NDK_SYSROOT}/usr/include -I${NDK_SYSROOT}/usr/include/${TOOL_PREFIX}"
+          # Set target-specific CC/CXX env vars for cargo
+          export CC_${{ matrix.target }}="${CC}"
+          export CXX_${{ matrix.target }}="${CXX}"
+          export AR_${{ matrix.target }}="${AR}"
+
           # jemalloc's configure script fails with Android NDK for some targets
           # Create a jemalloc stub library similar to the iOS approach
           mkdir -p /tmp/jemalloc-stub
