@@ -11,6 +11,8 @@ mod android;
 
 /// Eesha's compositor component to handle webrender.
 pub mod compositor;
+/// Clipboard abstraction for desktop and mobile platforms.
+pub mod clipboard;
 /// Utilities to read options and preferences.
 pub mod config;
 /// Error and result types.

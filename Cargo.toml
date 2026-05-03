@@ -88,7 +88,6 @@ embed-resource = "3"
 [dependencies]
 # Force vendored OpenSSL for cross-compilation (Android/iOS)
 openssl-sys = { version = "0.9", features = ["vendored"] }
-arboard = "3.4.0"
 crossbeam-channel = "0.5"
 env_logger = "0.11"
 euclid = "0.22"
@@ -114,7 +113,7 @@ serde_json = "1.0"
 bincode = { workspace = true }
 mime = "0.3"
 uuid = { workspace = true }
-# rfd (file dialogs) is not available on Android/iOS
+# rfd (file dialogs) and arboard (clipboard) are not available on Android/iOS
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 tokio = { version = "1", features = ["full"] }
 # Servo repo crates
@@ -163,11 +162,13 @@ directories = "6.0.0"
 [target.'cfg(all(unix, not(target_os = "macos"), not(target_os = "ios"), not(target_os = "android")))'.dependencies]
 notify-rust = { version = "4.11.5", features = ["images"] }
 rfd = "0.15"
+arboard = "3.4.0"
 
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 notify-rust = "4.11.5"
 muda = "0.15"
 rfd = "0.15"
+arboard = "3.4.0"
 
 [target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
 objc2 = "0.5"

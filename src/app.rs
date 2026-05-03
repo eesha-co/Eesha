@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, atomic::Ordering},
 };
 
-use arboard::Clipboard;
+use crate::clipboard::Clipboard;
 use base::id::{PipelineNamespace, PipelineNamespaceId, WebViewId};
 use bluetooth::BluetoothThreadFactory;
 use bluetooth_traits::BluetoothRequest;

@@ -52,7 +52,7 @@ use crate::{
     webview::{Panel, WebView, execute_script, prompt::PromptSender, webview_menu::WebViewMenu},
 };
 
-use arboard::Clipboard;
+use crate::clipboard::Clipboard;
 
 const PANEL_HEIGHT: f64 = 50.0;
 const TAB_HEIGHT: f64 = 30.0;

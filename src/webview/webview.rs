@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use arboard::Clipboard;
+use crate::clipboard::Clipboard;
 use base::id::WebViewId;
 use constellation_traits::{EmbedderToConstellationMessage, TraversalDirection};
 use crossbeam_channel::Sender;
