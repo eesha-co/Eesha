@@ -5,6 +5,7 @@ const {
   app,
   BaseWindow,
   WebContentsView,
+  BrowserWindow,
   ipcMain,
   session,
   protocol,
@@ -12,6 +13,7 @@ const {
   Menu,
   clipboard,
   globalShortcut,
+  nativeImage,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -31,7 +33,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.0';
 const USER_AGENT_SUFFIX = `Eesha/${APP_VERSION}`;
 const SEARCH_ENGINE = 'https://duckduckgo.com/?q=';
 const NEWTAB_URL = 'eesha://newtab';
@@ -40,6 +42,11 @@ const BOOKMARKS_FILE = path.join(app.getPath('userData'), 'bookmarks.json');
 const HISTORY_FILE = path.join(app.getPath('userData'), 'history.json');
 const MAX_HISTORY_ENTRIES = 1000;
 const CHROME_HEIGHT = 82; // Tab bar + URL bar height in pixels
+
+// ─── Resource Paths ──────────────────────────────────────────────────────────
+const SHARED_DIR = path.join(__dirname, '..', 'shared');
+const ICONS_DIR = path.join(SHARED_DIR, 'icons');
+const RESOURCES_DIR = path.join(SHARED_DIR, 'resources');
 
 // ─── Ad/Tracker Blocklist ────────────────────────────────────────────────────
 const BLOCKED_DOMAINS = [
@@ -149,6 +156,7 @@ function getNewTabHTML() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Tab - Eesha</title>
+  <link rel="icon" type="image/png" href="eesha://resources/icons/icon32x32.png">
   <style>
     *, *::before, *::after {
       margin: 0;
@@ -167,6 +175,24 @@ function getNewTabHTML() {
       justify-content: flex-start;
       overflow-x: hidden;
       position: relative;
+    }
+
+    /* Watermark logo background */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60vmin;
+      height: 60vmin;
+      background-image: url('eesha://resources/icons/eesha-logo.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
     }
 
     body::before {
@@ -203,6 +229,7 @@ function getNewTabHTML() {
       width: 80px;
       height: 80px;
       filter: drop-shadow(0 4px 16px rgba(233, 69, 96, 0.25));
+      border-radius: 16px;
     }
 
     .brand h1 {
@@ -326,11 +353,7 @@ function getNewTabHTML() {
 <body>
   <div class="container">
     <div class="brand">
-      <svg class="brand-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="48" fill="#1a1a2e" stroke="#e94560" stroke-width="3"/>
-        <path d="M35 30 L35 70 L65 50 Z" fill="#e94560"/>
-        <circle cx="58" cy="50" r="10" fill="#1a1a2e" stroke="#e94560" stroke-width="2"/>
-      </svg>
+      <img class="brand-icon" src="eesha://resources/icons/eesha-logo.png" alt="Eesha Logo">
       <h1>Eesha</h1>
       <p>Fast. Private. Yours.</p>
     </div>
@@ -542,8 +565,129 @@ function setupAdBlocking(ses) {
   });
 }
 
+// ─── Splash Screen ──────────────────────────────────────────────────────────
+let splashWindow = null;
+
+function createSplashScreen() {
+  const splashImage = path.join(RESOURCES_DIR, 'eesha-splash.png');
+  
+  splashWindow = new BrowserWindow({
+    width: 480,
+    height: 640,
+    transparent: true,
+    frame: false,
+    resizable: false,
+    center: true,
+    show: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+  });
+
+  const splashHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #1a1a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url('${splashImage.replace(/\\/g, '/')}');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      opacity: 0.06;
+      pointer-events: none;
+    }
+    .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      z-index: 1;
+    }
+    .splash-logo {
+      width: 200px;
+      height: auto;
+      filter: drop-shadow(0 8px 32px rgba(233, 69, 96, 0.3));
+      border-radius: 24px;
+    }
+    .splash-title {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+    .splash-tagline {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      color: #8888aa;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .splash-loader {
+      margin-top: 16px;
+      width: 120px;
+      height: 3px;
+      background: rgba(233, 69, 96, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .splash-loader-bar {
+      height: 100%;
+      width: 0%;
+      background: #e94560;
+      border-radius: 2px;
+      animation: splash-load 2s ease-in-out forwards;
+    }
+    @keyframes splash-load {
+      0% { width: 0%; }
+      40% { width: 60%; }
+      80% { width: 90%; }
+      100% { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="splash-content">
+    <img class="splash-logo" src="${splashImage.replace(/\\/g, '/')}" alt="Eesha"
+      onerror="this.style.display='none'">
+    <div class="splash-title">Eesha</div>
+    <div class="splash-tagline">Fast. Private. Yours.</div>
+    <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+  </div>
+</body>
+</html>`;
+
+  splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml)}`);
+  splashWindow.once('ready-to-show', () => {
+    splashWindow.show();
+  });
+}
+
+function closeSplashScreen() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+    splashWindow = null;
+  }
+}
+
 // ─── Create Main Window ──────────────────────────────────────────────────────
 function createWindow() {
+  // Load window icon
+  const iconPath = path.join(ICONS_DIR, 'icon512x512.png');
+  const windowIcon = fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath) : undefined;
+
   mainWindow = new BaseWindow({
     width: 1400,
     height: 900,
@@ -554,6 +698,7 @@ function createWindow() {
     titleBarOverlay: false,
     backgroundColor: '#1a1a2e',
     show: false,
+    icon: windowIcon,
     trafficLightPosition: { x: 12, y: 15 },
   });
 
@@ -596,9 +741,9 @@ function createWindow() {
         charset: 'utf-8',
       });
     } else if (url.startsWith('eesha://resources/')) {
-      // Serve resource files (like icons)
+      // Serve resource files (icons, logos, splash images)
       const resourcePath = url.replace('eesha://resources/', '');
-      const fullPath = path.join(__dirname, '..', 'shared', resourcePath);
+      const fullPath = path.join(SHARED_DIR, resourcePath);
       try {
         const data = fs.readFileSync(fullPath);
         const ext = path.extname(fullPath).toLowerCase();
@@ -608,6 +753,8 @@ function createWindow() {
           '.jpeg': 'image/jpeg',
           '.svg': 'image/svg+xml',
           '.ico': 'image/x-icon',
+          '.gif': 'image/gif',
+          '.webp': 'image/webp',
         };
         callback({
           data: data,
@@ -632,10 +779,14 @@ function createWindow() {
     layoutViews();
   });
 
-  // Show window when ready
+  // Show window when ready and close splash screen
   mainWindow.once('ready-to-show', () => {
     layoutViews();
-    mainWindow.show();
+    // Close splash and show main window
+    setTimeout(() => {
+      closeSplashScreen();
+      mainWindow.show();
+    }, 1500); // Give splash screen time to show
   });
 
   // Initial layout
@@ -1044,7 +1195,10 @@ app.whenReady().then(() => {
   // Set up application menu
   setupMenu();
 
-  // Create the main window
+  // Show splash screen first
+  createSplashScreen();
+
+  // Create the main window (it will remain hidden until ready)
   createWindow();
 
   // macOS: recreate window when clicking dock icon

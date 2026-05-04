@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Tab - Eesha</title>
+  <link rel="icon" type="image/png" href="eesha://resources/icons/icon32x32.png">
   <style>
     *, *::before, *::after {
       margin: 0;
@@ -24,15 +25,30 @@
       position: relative;
     }
 
+    /* Watermark logo background */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60vmin;
+      height: 60vmin;
+      background-image: url('eesha://resources/icons/eesha-logo.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
+    }
+
     body::before {
       content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: 
-        radial-gradient(circle at 20% 20%, rgba(232, 87, 42, 0.06) 0%, transparent 50%),
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(233, 69, 96, 0.06) 0%, transparent 50%),
         radial-gradient(circle at 80% 80%, rgba(66, 133, 244, 0.04) 0%, transparent 50%);
       pointer-events: none;
     }
@@ -44,12 +60,11 @@
       gap: 36px;
       max-width: 680px;
       width: 100%;
-      padding: 48px 32px 32px;
+      padding: 64px 32px 32px;
       position: relative;
       z-index: 1;
     }
 
-    /* Branding */
     .brand {
       text-align: center;
       display: flex;
@@ -61,7 +76,8 @@
     .brand-icon {
       width: 80px;
       height: 80px;
-      filter: drop-shadow(0 4px 16px rgba(232, 87, 42, 0.25));
+      filter: drop-shadow(0 4px 16px rgba(233, 69, 96, 0.25));
+      border-radius: 16px;
     }
 
     .brand h1 {
@@ -79,7 +95,6 @@
       text-transform: uppercase;
     }
 
-    /* Search */
     .search-wrapper {
       width: 100%;
       position: relative;
@@ -98,13 +113,11 @@
       backdrop-filter: blur(8px);
     }
 
-    .search-bar::placeholder {
-      color: #5a5a7a;
-    }
+    .search-bar::placeholder { color: #5a5a7a; }
 
     .search-bar:focus {
-      border-color: #E8572A;
-      box-shadow: 0 0 0 3px rgba(232, 87, 42, 0.15), 0 8px 32px rgba(0, 0, 0, 0.2);
+      border-color: #e94560;
+      box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.15), 0 8px 32px rgba(0, 0, 0, 0.2);
       background: rgba(22, 33, 62, 0.95);
     }
 
@@ -118,22 +131,13 @@
       transition: color 0.25s ease;
     }
 
-    .search-bar:focus ~ .search-icon {
-      color: #E8572A;
-    }
+    .search-bar:focus ~ .search-icon { color: #e94560; }
 
-    /* Quick Links */
     .quick-links {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 14px;
       width: 100%;
-    }
-
-    @media (max-width: 480px) {
-      .quick-links {
-        grid-template-columns: repeat(2, 1fr);
-      }
     }
 
     .quick-link {
@@ -154,7 +158,7 @@
 
     .quick-link:hover {
       background: rgba(30, 45, 75, 0.8);
-      border-color: #E8572A;
+      border-color: #e94560;
       transform: translateY(-3px);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
       color: #f0f0f0;
@@ -173,9 +177,7 @@
       transition: transform 0.2s ease;
     }
 
-    .quick-link:hover .quick-link-icon {
-      transform: scale(1.1);
-    }
+    .quick-link:hover .quick-link-icon { transform: scale(1.1); }
 
     .quick-link-label {
       font-size: 12px;
@@ -187,7 +189,6 @@
       max-width: 100%;
     }
 
-    /* Footer */
     .footer {
       position: absolute;
       bottom: 20px;
@@ -199,34 +200,26 @@
 </head>
 <body>
   <div class="container">
-    <!-- Branding -->
     <div class="brand">
-      <img class="brand-icon" src="eesha://resources/eesha-logo.png" alt="Eesha" />
+      <img class="brand-icon" src="eesha://resources/icons/eesha-logo.png" alt="Eesha Logo">
       <h1>Eesha</h1>
       <p>Fast. Private. Yours.</p>
     </div>
 
-    <!-- Search Bar -->
     <div class="search-wrapper">
-      <input
-        type="text"
-        class="search-bar"
-        id="searchInput"
-        placeholder="Search the web or enter a URL..."
-        autocomplete="off"
-        autofocus
-      />
-      <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <input type="text" class="search-bar" id="searchInput"
+        placeholder="Search with DuckDuckGo or enter a URL..." autocomplete="off" autofocus />
+      <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
     </div>
 
-    <!-- Quick Links -->
     <div class="quick-links">
-      <a class="quick-link" href="https://www.google.com">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #4285F4, #34A853);">G</div>
-        <span class="quick-link-label">Google</span>
+      <a class="quick-link" href="https://duckduckgo.com">
+        <div class="quick-link-icon" style="background: linear-gradient(135deg, #DE5833, #F5A623);">D</div>
+        <span class="quick-link-label">DuckDuckGo</span>
       </a>
       <a class="quick-link" href="https://www.wikipedia.org">
         <div class="quick-link-icon" style="background: linear-gradient(135deg, #636466, #3a3a3c);">W</div>
@@ -254,32 +247,35 @@
         <div class="quick-link-icon" style="background: linear-gradient(135deg, #F48024, #E36D25);">S</div>
         <span class="quick-link-label">Stack Overflow</span>
       </a>
-      <a class="quick-link" href="https://www.mozilla.org">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #000, #333);">M</div>
-        <span class="quick-link-label">Mozilla</span>
+      <a class="quick-link" href="https://mastodon.social">
+        <div class="quick-link-icon" style="background: linear-gradient(135deg, #6364FF, #563ACC);">M</div>
+        <span class="quick-link-label">Mastodon</span>
       </a>
     </div>
   </div>
-
-  <div class="footer">Eesha Browser v0.1.1 &mdash; Powered by Servo</div>
-
+  <div class="footer">Eesha Browser v0.3.0 &mdash; Privacy-first browsing</div>
   <script>
     (function() {
       var searchInput = document.getElementById('searchInput');
-
       searchInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
           var query = searchInput.value.trim();
           if (query) {
             if (/^https?:\/\//i.test(query)) {
-              window.location.href = query;
+              window.eesha.navigate(query);
             } else if (/^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/.test(query)) {
-              window.location.href = 'https://' + query;
+              window.eesha.navigate('https://' + query);
             } else {
-              window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+              window.eesha.navigate('https://duckduckgo.com/?q=' + encodeURIComponent(query));
             }
           }
         }
+      });
+      document.querySelectorAll('.quick-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.eesha.navigate(this.href);
+        });
       });
     })();
   </script>

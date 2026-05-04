@@ -7,5 +7,10 @@
         <item name="colorSecondary">#302b63</item>
         <item name="android:statusBarColor">#1a1a2e</item>
         <item name="android:navigationBarColor">#1a1a2e</item>
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+    </style>
+
+    <style name="Theme.Eesha.Splash" parent="Theme.Eesha">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
     </style>
 </resources>

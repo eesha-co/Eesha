@@ -216,6 +216,16 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
     @objc private func goHome() { loadEeshaNewTab() }
 
     private func loadEeshaNewTab() {
+        // Load logo image as base64 for embedding in HTML
+        var logoDataUri = ""
+        if let logoUrl = Bundle.main.url(forResource: "splash", withExtension: "png", subdirectory: "Eesha"),
+           let logoData = try? Data(contentsOf: logoUrl) {
+            logoDataUri = "data:image/png;base64,\(logoData.base64EncodedString())"
+        } else if let splashImage = UIImage(named: "SplashImage"),
+                  let pngData = splashImage.pngData() {
+            logoDataUri = "data:image/png;base64,\(pngData.base64EncodedString())"
+        }
+
         let html = """
         <!DOCTYPE html>
         <html lang="en">
@@ -231,8 +241,24 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                     color: #fff; min-height: 100vh;
                     display: flex; flex-direction: column; align-items: center;
                     justify-content: center; padding: 1rem;
+                    position: relative; overflow: hidden;
                 }
-                .logo { font-size: 3rem; margin-bottom: 1.5rem; font-weight: 700; color: #e94560; }
+                body::after {
+                    content: '';
+                    position: fixed;
+                    top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 60vmin; height: 60vmin;
+                    background-image: url('\(logoDataUri)');
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    opacity: 0.04;
+                    pointer-events: none;
+                }
+                .logo-container { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+                .logo-img { width: 64px; height: 64px; border-radius: 14px; filter: drop-shadow(0 4px 12px rgba(233,69,96,0.3)); }
+                .logo-text { font-size: 2.5rem; font-weight: 700; color: #e94560; }
                 .search-container { width: 100%; max-width: 500px; }
                 .search-box {
                     width: 100%; padding: 0.8rem 1.2rem; font-size: 1rem;
@@ -261,7 +287,10 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
             </style>
         </head>
         <body>
-            <div class="logo">Eesha</div>
+            <div class="logo-container">
+                \(logoDataUri.isEmpty ? "" : "<img class=\"logo-img\" src=\"\(logoDataUri)\" alt=\"Eesha Logo\">")
+                <div class="logo-text">Eesha</div>
+            </div>
             <div class="search-container">
                 <input type="text" class="search-box" id="search" placeholder="Search the web or enter a URL" autofocus>
             </div>
@@ -282,7 +311,7 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                     <div class="shortcut-icon">X</div><span class="shortcut-name">X</span>
                 </a>
             </div>
-            <div class="footer">Eesha Browser v0.2.0</div>
+            <div class="footer">Eesha Browser v0.3.0</div>
             <script>
                 document.getElementById('search').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {

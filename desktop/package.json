@@ -1,6 +1,6 @@
 {
   "name": "eesha-browser",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Eesha - A privacy-first browser powered by Chromium",
   "main": "main.js",
   "author": {
@@ -28,8 +28,8 @@
       "main.js",
       "preload.js",
       "renderer/**/*",
-      "../shared/icons/icon512x512.png",
-      "../shared/icons/icon.ico"
+      "../shared/icons/**/*",
+      "../shared/resources/**/*"
     ],
     "linux": {
       "target": ["AppImage"],
