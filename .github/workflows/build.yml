@@ -78,6 +78,7 @@ jobs:
           name: eesha-windows
           path: |
             desktop/dist/*.exe
+            desktop/dist/Eesha*
 
   build-desktop-mac:
     name: Desktop (macOS)
@@ -273,51 +274,50 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_TAG=eesha-v${{ env.EESHA_VERSION }}
-          ARTIFACT_FILES=$(find valid-artifacts/ -type f | sort)
 
-          if [ -z "$ARTIFACT_FILES" ]; then
+          # Count valid artifacts
+          ARTIFACT_COUNT=$(find valid-artifacts/ -type f | wc -l)
+
+          if [ "$ARTIFACT_COUNT" -eq 0 ]; then
             echo "No valid artifacts"
             exit 0
           fi
 
+          # List what we have
+          echo "Files to upload:"
+          ls -la valid-artifacts/
+
           git fetch --tags --quiet
           if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
             echo "Updating release ${RELEASE_TAG}..."
-            for f in $ARTIFACT_FILES; do
-              gh release upload ${RELEASE_TAG} "$f" --clobber 2>/dev/null || true
-            done
+            find valid-artifacts/ -type f -exec gh release upload ${RELEASE_TAG} {} --clobber \;
           else
             echo "Creating release ${RELEASE_TAG}..."
-            gh release create ${RELEASE_TAG} $ARTIFACT_FILES --prerelease \
+            find valid-artifacts/ -type f -print0 | xargs -0 gh release create ${RELEASE_TAG} --prerelease \
               --title "Eesha ${{ env.EESHA_VERSION }}" \
-              --notes "Eesha Browser v${{ env.EESHA_VERSION }} — Blink/Chromium-powered
+              --notes "Eesha Browser v${{ env.EESHA_VERSION }}
 
-          ## 🖥️ Desktop (Electron + Chromium)
-          - **Linux** — \`.AppImage\` (universal) and \`.deb\` (Debian/Ubuntu)
-          - **Windows** — \`.exe\` installer and portable
-          - **macOS** — \`.dmg\` (Intel + Apple Silicon)
+          ## Desktop (Electron + Chromium)
+          - Linux: AppImage (universal)
+          - Windows: Portable .exe
+          - macOS: .dmg (Apple Silicon)
 
-          ## 📱 Mobile
-          - **Android** — \`.apk\` (WebView/Chromium-based)
-          - **iOS** — Source code (requires Xcode + Apple Developer account to build)
+          ## Mobile
+          - Android: .apk (WebView/Chromium-based)
+          - iOS: Source code (requires Xcode + Apple Developer account to build)
 
-          ## ✨ What's New in v0.4.1
-          - 🎨 Updated official Eesha icon across all platforms
-          - 🖼️ Splash screen properly sized with branded image
-          - 💧 Logo watermark positioned above search area, more visible
-          - 🏷️ Removed redundant center logo/text (watermark IS the logo)
-          - 🪟 Fixed Windows portable exe build
-          - 📱 Consistent branding across desktop and mobile
+          ## What's New in v0.4.1
+          - Updated official Eesha icon across all platforms
+          - Splash screen properly sized with branded image
+          - Logo watermark positioned above search area, more visible
+          - Removed redundant center logo/text (watermark IS the logo)
+          - Fixed Windows portable exe build
+          - Consistent branding across desktop and mobile
 
-          ## 🚀 Installation
-          ### Desktop
-          - **Linux**: Download \`.AppImage\`, make executable (\`chmod +x\`), and run
-          - **Windows**: Download \`.exe\` installer and run
-          - **macOS**: Download \`.dmg\`, open, drag to Applications
-
-          ### Android
-          - Download \`.apk\` and install (enable \"Install from unknown sources\")
-
-          ### iOS
-          - Requires building from source with Xcode"
+          ## Installation
+          - Linux: Download .AppImage, make executable (chmod +x), and run
+          - Windows: Download .exe and run
+          - macOS: Download .dmg, open, drag to Applications
+          - Android: Download .apk and install (enable Install from unknown sources)
+          - iOS: Requires building from source with Xcode"
           fi
