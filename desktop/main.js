@@ -177,20 +177,20 @@ function getNewTabHTML() {
       position: relative;
     }
 
-    /* Watermark logo background - Grok/z.ai style large centered logo */
+    /* Watermark logo background - Grok/z.ai style, positioned above search */
     body::after {
       content: '';
       position: fixed;
-      top: 50%;
+      top: 25%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 85vmin;
-      height: 85vmin;
+      width: 70vmin;
+      height: 70vmin;
       background-image: url('eesha://resources/icons/eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.07;
+      opacity: 0.12;
       pointer-events: none;
       z-index: 0;
     }
@@ -209,42 +209,12 @@ function getNewTabHTML() {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 36px;
+      gap: 28px;
       max-width: 680px;
       width: 100%;
       padding: 64px 32px 32px;
       position: relative;
       z-index: 1;
-    }
-
-    .brand {
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-icon {
-      width: 80px;
-      height: 80px;
-      filter: drop-shadow(0 4px 16px rgba(233, 69, 96, 0.25));
-      border-radius: 16px;
-    }
-
-    .brand h1 {
-      font-size: 36px;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -0.5px;
-    }
-
-    .brand p {
-      font-size: 13px;
-      color: #8888aa;
-      font-weight: 300;
-      letter-spacing: 2px;
-      text-transform: uppercase;
     }
 
     .search-wrapper {
@@ -352,12 +322,6 @@ function getNewTabHTML() {
 </head>
 <body>
   <div class="container">
-    <div class="brand">
-      <img class="brand-icon" src="eesha://resources/icons/eesha-logo.png" alt="Eesha Logo">
-      <h1>Eesha</h1>
-      <p>Fast. Private. Yours.</p>
-    </div>
-
     <div class="search-wrapper">
       <input type="text" class="search-bar" id="searchInput"
         placeholder="Search with DuckDuckGo or enter a URL..." autocomplete="off" autofocus />
@@ -623,14 +587,14 @@ function createSplashScreen() {
       z-index: 1;
       width: 100%;
       height: 100%;
-      padding: 40px;
+      padding: 30px;
     }
     .splash-image {
-      max-width: 90%;
-      max-height: 55%;
+      max-width: 80%;
+      max-height: 40%;
       object-fit: contain;
       filter: drop-shadow(0 8px 32px rgba(233, 69, 96, 0.3));
-      border-radius: 16px;
+      border-radius: 12px;
     }
     .splash-title {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

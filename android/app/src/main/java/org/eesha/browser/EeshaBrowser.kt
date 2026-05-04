@@ -166,23 +166,20 @@ class EeshaBrowser : AppCompatActivity() {
                     position: relative;
                     overflow: hidden;
                 }
-                /* Watermark logo background - Grok/z.ai style large centered logo */
+                /* Watermark logo background - positioned above search area */
                 body::after {
                     content: '';
                     position: fixed;
-                    top: 50%; left: 50%;
+                    top: 25%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 85vmin; height: 85vmin;
+                    width: 70vmin; height: 70vmin;
                     background-image: url('$iconDataUri');
                     background-size: contain;
                     background-repeat: no-repeat;
                     background-position: center;
-                    opacity: 0.07;
+                    opacity: 0.12;
                     pointer-events: none;
                 }
-                .logo-container { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
-                .logo-img { width: 64px; height: 64px; border-radius: 14px; filter: drop-shadow(0 4px 12px rgba(233,69,96,0.3)); }
-                .logo-text { font-size: 2.5rem; font-weight: 700; color: #e94560; }
                 .search-container { width: 100%; max-width: 500px; }
                 .search-box {
                     width: 100%; padding: 0.8rem 1.2rem; font-size: 1rem;
@@ -211,10 +208,6 @@ class EeshaBrowser : AppCompatActivity() {
             </style>
         </head>
         <body>
-            <div class="logo-container">
-                ${if (iconDataUri.isNotEmpty()) """<img class="logo-img" src="$iconDataUri" alt="Eesha Logo">""" else ""}
-                <div class="logo-text">Eesha</div>
-            </div>
             <div class="search-container">
                 <input type="text" class="search-box" id="search" placeholder="Search the web or enter a URL" autofocus>
             </div>
