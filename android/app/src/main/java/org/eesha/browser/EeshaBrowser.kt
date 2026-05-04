@@ -86,7 +86,7 @@ class EeshaBrowser : AppCompatActivity() {
             loadsImagesAutomatically = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
-            userAgentString = "Eesha/0.6.2 (Android) " + userAgentString
+            userAgentString = "Eesha/0.7.0 (Android) " + userAgentString
         }
 
         // WebView debugging is auto-enabled for debuggable apps (debug builds)
@@ -151,6 +151,7 @@ class EeshaBrowser : AppCompatActivity() {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Eesha - New Tab</title>
+            <link rel="icon" type="image/png" href="$logoDataUri">
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body {

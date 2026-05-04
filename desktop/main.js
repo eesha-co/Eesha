@@ -33,7 +33,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '0.6.2';
+const APP_VERSION = '0.7.0';
 const USER_AGENT_SUFFIX = `Eesha/${APP_VERSION}`;
 const SEARCH_ENGINE = 'https://duckduckgo.com/?q=';
 const NEWTAB_URL = 'eesha://newtab';
@@ -358,7 +358,7 @@ function getNewTabHTML() {
       </a>
     </div>
   </div>
-  <div class="footer">Eesha Browser v${APP_VERSION}</div>
+  <div class="footer">Eesha Browser v0.7.0</div>
   <script>
     (function() {
       var searchInput = document.getElementById('searchInput');
@@ -396,6 +396,7 @@ function getSettingsHTML() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings - Eesha</title>
+  <link rel="icon" type="image/png" href="eesha://resources/icons/eesha-logo.png">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -539,6 +540,7 @@ function createSplashScreen() {
 <html>
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="file://${logoImage.replace(/\\/g, '/')}">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
