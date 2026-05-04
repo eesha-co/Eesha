@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 env:
-  EESHA_VERSION: "0.6.0"
+  EESHA_VERSION: "0.6.1"
 
 jobs:
   # ─── Desktop Build (Electron) ────────────────────────────────────
@@ -309,7 +309,7 @@ jobs:
           - **Android**: .apk (WebView/Chromium-based) - Download and install (enable Install from unknown sources)
           - **iOS**: Source code (requires Xcode + Apple Developer account to build)
 
-          ## What's New in v0.6.0
+          ## What's New in v0.6.1
           - All platforms now use eesha-logo.png consistently (favicon, watermark, splash, icons)
           - Watermark uses full-resolution logo (677x369) - visible and properly sized
           - Watermark opacity increased to 0.18 with correct landscape aspect ratio

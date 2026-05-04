@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Dark background -->
-    <item android:drawable="@drawable/splash_bg" />
-    <!-- Single centered logo (eesha-logo.png) -->
+    <!-- Plain dark background color only - NO image, NO watermark -->
+    <item>
+        <color android:color="#1a1a2e"/>
+    </item>
+    <!-- Single centered logo (eesha-logo.png) - the ONLY image -->
     <item>
         <bitmap
             android:src="@drawable/eesha_logo_watermark"

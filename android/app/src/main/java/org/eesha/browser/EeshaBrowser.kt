@@ -86,7 +86,7 @@ class EeshaBrowser : AppCompatActivity() {
             loadsImagesAutomatically = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
-            userAgentString = "Eesha/0.6.0 (Android) " + userAgentString
+            userAgentString = "Eesha/0.6.1 (Android) " + userAgentString
         }
 
         // WebView debugging is auto-enabled for debuggable apps (debug builds)

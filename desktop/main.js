@@ -33,7 +33,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '0.6.0';
+const APP_VERSION = '0.6.1';
 const USER_AGENT_SUFFIX = `Eesha/${APP_VERSION}`;
 const SEARCH_ENGINE = 'https://duckduckgo.com/?q=';
 const NEWTAB_URL = 'eesha://newtab';
@@ -549,38 +549,14 @@ function createSplashScreen() {
       align-items: center;
       justify-content: center;
     }
-    .splash-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      padding: 40px;
-    }
     .splash-logo {
       max-width: 70%;
-      max-height: 50%;
+      max-height: 60%;
       object-fit: contain;
     }
-    .splash-title {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 24px;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -0.5px;
-    }
-    .splash-tagline {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 10px;
-      color: #8888aa;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
     .splash-loader {
-      margin-top: 8px;
+      position: fixed;
+      bottom: 40px;
       width: 120px;
       height: 3px;
       background: rgba(233, 69, 96, 0.2);
@@ -603,13 +579,9 @@ function createSplashScreen() {
   </style>
 </head>
 <body>
-  <div class="splash-content">
-    <img class="splash-logo" src="${logoImage.replace(/\\/g, '/')}" alt="Eesha"
-      onerror="this.style.display='none'">
-    <div class="splash-title">Eesha</div>
-    <div class="splash-tagline">Fast. Private. Yours.</div>
-    <div class="splash-loader"><div class="splash-loader-bar"></div></div>
-  </div>
+  <img class="splash-logo" src="${logoImage.replace(/\\/g, '/')}" alt="Eesha"
+    onerror="this.style.display='none'">
+  <div class="splash-loader"><div class="splash-loader-bar"></div></div>
 </body>
 </html>`;
 
