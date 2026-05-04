@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 env:
-  EESHA_VERSION: "0.4.0"
+  EESHA_VERSION: "0.4.1"
 
 jobs:
   # ─── Desktop Build (Electron) ────────────────────────────────────
@@ -66,8 +66,8 @@ jobs:
           # Find and rename it
           $portable = Get-ChildItem -File | Where-Object { $_.Extension -eq '' -and $_.Length -gt 10MB }
           if ($portable) {
-            Rename-Item $portable.FullName "Eesha-0.4.0-portable.exe"
-            Write-Host "Renamed $($portable.Name) to Eesha-0.4.0-portable.exe"
+            Rename-Item $portable.FullName "Eesha-0.4.1-portable.exe"
+            Write-Host "Renamed $($portable.Name) to Eesha-0.4.1-portable.exe"
           }
           # List all files
           Get-ChildItem -File | ForEach-Object { Write-Host "$($_.Name) ($([math]::Round($_.Length/1MB,1))MB)" }
@@ -263,8 +263,8 @@ jobs:
             SIZE=$(stat -c%s "$f" 2>/dev/null || echo 0)
             if [ "$SIZE" -gt 10000000 ]; then
               # Large file without extension is likely the Windows portable exe
-              cp "$f" "valid-artifacts/Eesha-0.4.0-portable.exe"
-              echo "Including (renamed): $(basename $f) → Eesha-0.4.0-portable.exe (${SIZE} bytes)"
+              cp "$f" "valid-artifacts/Eesha-0.4.1-portable.exe"
+              echo "Including (renamed): $(basename $f) → Eesha-0.4.1-portable.exe (${SIZE} bytes)"
             fi
           done
 
@@ -301,12 +301,12 @@ jobs:
           - **Android** — \`.apk\` (WebView/Chromium-based)
           - **iOS** — Source code (requires Xcode + Apple Developer account to build)
 
-          ## ✨ What's New in v0.4.0
+          ## ✨ What's New in v0.4.1
           - 🎨 Updated official Eesha icon across all platforms
-          - 🖼️ New splash screen with branded image
-          - 💧 Grok/z.ai-style large logo watermark on new tab page
-          - 🏷️ Custom app icons regenerated from official logo
-          - 🖥️ Splash screen uses dedicated splash image
+          - 🖼️ Splash screen properly sized with branded image
+          - 💧 Logo watermark positioned above search area, more visible
+          - 🏷️ Removed redundant center logo/text (watermark IS the logo)
+          - 🪟 Fixed Windows portable exe build
           - 📱 Consistent branding across desktop and mobile
 
           ## 🚀 Installation
