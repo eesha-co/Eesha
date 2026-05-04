@@ -33,7 +33,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '0.4.1';
+const APP_VERSION = '0.5.0';
 const USER_AGENT_SUFFIX = `Eesha/${APP_VERSION}`;
 const SEARCH_ENGINE = 'https://duckduckgo.com/?q=';
 const NEWTAB_URL = 'eesha://newtab';
@@ -181,16 +181,16 @@ function getNewTabHTML() {
     body::after {
       content: '';
       position: fixed;
-      top: 25%;
+      top: 18%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 70vmin;
-      height: 70vmin;
+      width: 55vmin;
+      height: 55vmin;
       background-image: url('eesha://resources/icons/eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.12;
+      opacity: 0.18;
       pointer-events: none;
       z-index: 0;
     }
@@ -562,20 +562,20 @@ function createSplashScreen() {
       align-items: center;
       justify-content: center;
     }
-    /* Watermark icon behind splash content */
+    /* Subtle watermark behind splash content */
     body::after {
       content: '';
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 90%;
-      height: 90%;
+      width: 70%;
+      height: 70%;
       background-image: url('${iconImage.replace(/\\/g, '/')}');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.05;
+      opacity: 0.04;
       pointer-events: none;
     }
     .splash-content {
@@ -583,29 +583,28 @@ function createSplashScreen() {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      gap: 16px;
       z-index: 1;
       width: 100%;
       height: 100%;
       padding: 30px;
     }
     .splash-image {
-      max-width: 80%;
-      max-height: 40%;
+      max-width: 65%;
+      max-height: 30%;
       object-fit: contain;
-      filter: drop-shadow(0 8px 32px rgba(233, 69, 96, 0.3));
-      border-radius: 12px;
+      filter: drop-shadow(0 4px 16px rgba(233, 69, 96, 0.2));
     }
     .splash-title {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 700;
       color: #ffffff;
       letter-spacing: -0.5px;
     }
     .splash-tagline {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 11px;
+      font-size: 10px;
       color: #8888aa;
       letter-spacing: 3px;
       text-transform: uppercase;

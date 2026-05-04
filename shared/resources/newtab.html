@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Tab - Eesha</title>
-  <link rel="icon" type="image/png" href="eesha://resources/icons/icon32x32.png">
   <style>
     *, *::before, *::after {
       margin: 0;
@@ -29,16 +28,16 @@
     body::after {
       content: '';
       position: fixed;
-      top: 25%;
+      top: 18%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 70vmin;
-      height: 70vmin;
-      background-image: url('eesha://resources/icons/eesha-logo.png');
+      width: 55vmin;
+      height: 55vmin;
+      background-image: url('eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.12;
+      opacity: 0.18;
       pointer-events: none;
       z-index: 0;
     }
@@ -217,7 +216,7 @@
       </a>
     </div>
   </div>
-  <div class="footer">Eesha Browser v0.4.0 &mdash; Privacy-first browsing</div>
+  <div class="footer">Eesha Browser v0.5.0 &mdash; Privacy-first browsing</div>
   <script>
     (function() {
       var searchInput = document.getElementById('searchInput');
@@ -226,11 +225,11 @@
           var query = searchInput.value.trim();
           if (query) {
             if (/^https?:\/\//i.test(query)) {
-              window.eesha.navigate(query);
+              window.location.href = query;
             } else if (/^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/.test(query)) {
-              window.eesha.navigate('https://' + query);
+              window.location.href = 'https://' + query;
             } else {
-              window.eesha.navigate('https://duckduckgo.com/?q=' + encodeURIComponent(query));
+              window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(query);
             }
           }
         }
@@ -238,7 +237,7 @@
       document.querySelectorAll('.quick-link').forEach(function(link) {
         link.addEventListener('click', function(e) {
           e.preventDefault();
-          window.eesha.navigate(this.href);
+          window.location.href = this.href;
         });
       });
     })();

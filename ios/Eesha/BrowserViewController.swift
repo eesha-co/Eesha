@@ -241,24 +241,24 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
                     color: #fff; min-height: 100vh;
                     display: flex; flex-direction: column; align-items: center;
-                    justify-content: center; padding: 1rem;
+                    justify-content: flex-start; padding: 2.5rem 1rem 1rem;
                     position: relative; overflow: hidden;
                 }
                 /* Watermark logo background - positioned above search area */
                 body::after {
                     content: '';
                     position: fixed;
-                    top: 25%; left: 50%;
+                    top: 18%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 70vmin; height: 70vmin;
+                    width: 55vmin; height: 55vmin;
                     background-image: url('\(iconDataUri)');
                     background-size: contain;
                     background-repeat: no-repeat;
                     background-position: center;
-                    opacity: 0.12;
+                    opacity: 0.18;
                     pointer-events: none;
                 }
-                .search-container { width: 100%; max-width: 500px; }
+                .search-container { width: 100%; max-width: 500px; position: relative; z-index: 1; }
                 .search-box {
                     width: 100%; padding: 0.8rem 1.2rem; font-size: 1rem;
                     border: 2px solid rgba(255,255,255,0.1); border-radius: 0.8rem;
@@ -269,6 +269,7 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                 .shortcuts {
                     display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
                     gap: 0.8rem; margin-top: 1.5rem; max-width: 500px; width: 100%;
+                    position: relative; z-index: 1;
                 }
                 .shortcut {
                     display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
@@ -282,7 +283,7 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                     font-size: 1rem; font-weight: 700;
                 }
                 .shortcut-name { font-size: 0.65rem; color: rgba(255,255,255,0.7); }
-                .footer { margin-top: 2rem; color: rgba(255,255,255,0.3); font-size: 0.7rem; }
+                .footer { margin-top: 2rem; color: rgba(255,255,255,0.3); font-size: 0.7rem; position: relative; z-index: 1; }
             </style>
         </head>
         <body>
@@ -306,7 +307,7 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                     <div class="shortcut-icon">X</div><span class="shortcut-name">X</span>
                 </a>
             </div>
-            <div class="footer">Eesha Browser v0.4.0</div>
+            <div class="footer">Eesha Browser v0.5.0</div>
             <script>
                 document.getElementById('search').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {

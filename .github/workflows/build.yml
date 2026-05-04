@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 env:
-  EESHA_VERSION: "0.4.1"
+  EESHA_VERSION: "0.5.0"
 
 jobs:
   # ─── Desktop Build (Electron) ────────────────────────────────────
@@ -58,18 +58,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Rename Windows portable
+      - name: List build output
         working-directory: desktop/dist
         shell: pwsh
         run: |
-          # electron-builder portable creates a file without .exe extension sometimes
-          # Find and rename it
-          $portable = Get-ChildItem -File | Where-Object { $_.Extension -eq '' -and $_.Length -gt 10MB }
-          if ($portable) {
-            Rename-Item $portable.FullName "Eesha-0.4.1-portable.exe"
-            Write-Host "Renamed $($portable.Name) to Eesha-0.4.1-portable.exe"
+          Get-ChildItem -Recurse -File | ForEach-Object {
+            Write-Host "$($_.FullName) ($([math]::Round($_.Length/1MB,1))MB)"
           }
-          # List all files
+
+      - name: Ensure exe extension
+        working-directory: desktop/dist
+        shell: pwsh
+        run: |
+          # Find any file > 10MB without extension (portable exe without .exe)
+          Get-ChildItem -File | Where-Object { $_.Extension -eq '' -and $_.Length -gt 10MB } | ForEach-Object {
+            $newName = "$($_.BaseName)-portable.exe"
+            Rename-Item $_.FullName $newName
+            Write-Host "Renamed $($_.Name) to $newName"
+          }
+          # List all files after rename
           Get-ChildItem -File | ForEach-Object { Write-Host "$($_.Name) ($([math]::Round($_.Length/1MB,1))MB)" }
 
       - name: Upload artifacts
@@ -78,7 +85,6 @@ jobs:
           name: eesha-windows
           path: |
             desktop/dist/*.exe
-            desktop/dist/Eesha*
 
   build-desktop-mac:
     name: Desktop (macOS)
@@ -141,7 +147,6 @@ jobs:
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           EOF
-          # Fix indentation in properties file
           sed -i 's/^          //' gradle/wrapper/gradle-wrapper.properties
 
       - name: Create gradlew script
@@ -246,78 +251,76 @@ jobs:
       - name: List artifacts
         run: ls -laR artifacts/
 
-      - name: Filter valid artifacts
+      - name: Collect valid release files
         run: |
-          mkdir -p valid-artifacts
-          # Copy files with known extensions
-          find artifacts/ -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.apk" -o -name "*.tar.gz" \) | while read f; do
+          mkdir -p release-files
+          # Copy known binary artifacts (> 1KB to skip empty/dummy files)
+          find artifacts/ -type f \( -name "*.AppImage" -o -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.apk" -o -name "*.tar.gz" \) | while read f; do
             SIZE=$(stat -c%s "$f" 2>/dev/null || echo 0)
             if [ "$SIZE" -gt 1024 ]; then
-              cp "$f" valid-artifacts/
-              echo "Including: $(basename $f) (${SIZE} bytes)"
-            else
-              echo "Skipping (too small): $(basename $f) (${SIZE} bytes)"
+              cp "$f" release-files/
+              echo "Including: $(basename $f) ($(($SIZE/1024))KB)"
             fi
           done
-          # Handle Windows portable exe (comes without extension)
+          # Also handle files without extensions that are large (Windows portable exe)
           find artifacts/ -type f ! -name "*.*" | while read f; do
             SIZE=$(stat -c%s "$f" 2>/dev/null || echo 0)
             if [ "$SIZE" -gt 10000000 ]; then
-              # Large file without extension is likely the Windows portable exe
-              cp "$f" "valid-artifacts/Eesha-0.4.1-portable.exe"
-              echo "Including (renamed): $(basename $f) → Eesha-0.4.1-portable.exe (${SIZE} bytes)"
+              cp "$f" "release-files/Eesha-${{ env.EESHA_VERSION }}-portable.exe"
+              echo "Including (renamed): $(basename $f) -> Eesha-${{ env.EESHA_VERSION }}-portable.exe"
             fi
           done
+          echo "--- Final release files ---"
+          ls -la release-files/
 
-      - name: Create release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_TAG=eesha-v${{ env.EESHA_VERSION }}
 
-          # Count valid artifacts
-          ARTIFACT_COUNT=$(find valid-artifacts/ -type f | wc -l)
-
+          ARTIFACT_COUNT=$(find release-files/ -type f | wc -l)
           if [ "$ARTIFACT_COUNT" -eq 0 ]; then
-            echo "No valid artifacts"
-            exit 0
+            echo "No valid release files found!"
+            exit 1
           fi
 
-          # List what we have
-          echo "Files to upload:"
-          ls -la valid-artifacts/
+          echo "Creating release ${RELEASE_TAG} with ${ARTIFACT_COUNT} files..."
 
+          # Delete existing release if it exists (to update)
           git fetch --tags --quiet
           if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            echo "Updating release ${RELEASE_TAG}..."
-            find valid-artifacts/ -type f -exec gh release upload ${RELEASE_TAG} {} --clobber \;
-          else
-            echo "Creating release ${RELEASE_TAG}..."
-            find valid-artifacts/ -type f -print0 | xargs -0 gh release create ${RELEASE_TAG} --prerelease \
-              --title "Eesha ${{ env.EESHA_VERSION }}" \
-              --notes "Eesha Browser v${{ env.EESHA_VERSION }}
+            echo "Deleting existing release ${RELEASE_TAG}..."
+            gh release delete ${RELEASE_TAG} --yes || true
+            git push origin :refs/tags/${RELEASE_TAG} --quiet || true
+          fi
+
+          # Create new release with all artifacts
+          find release-files/ -type f -print0 | xargs -0 gh release create ${RELEASE_TAG} --prerelease \
+            --title "Eesha ${{ env.EESHA_VERSION }}" \
+            --notes "Eesha Browser v${{ env.EESHA_VERSION }}
 
           ## Desktop (Electron + Chromium)
-          - Linux: AppImage (universal)
-          - Windows: Portable .exe
-          - macOS: .dmg (Apple Silicon)
+          - **Linux**: AppImage (universal) - Download, make executable (chmod +x), and run
+          - **Windows**: Portable .exe - Download and run directly
+          - **macOS**: .dmg (Apple Silicon) - Download, open, drag to Applications
 
           ## Mobile
-          - Android: .apk (WebView/Chromium-based)
-          - iOS: Source code (requires Xcode + Apple Developer account to build)
+          - **Android**: .apk (WebView/Chromium-based) - Download and install (enable Install from unknown sources)
+          - **iOS**: Source code (requires Xcode + Apple Developer account to build)
 
-          ## What's New in v0.4.1
-          - Updated official Eesha icon across all platforms
-          - Splash screen properly sized with branded image
-          - Logo watermark positioned above search area, more visible
-          - Removed redundant center logo/text (watermark IS the logo)
-          - Fixed Windows portable exe build
+          ## What's New in v0.5.0
+          - New official Eesha icon across all platforms
+          - Splash screen properly fitted (no more zoom/crop)
+          - Watermark more visible (opacity increased)
+          - Watermark positioned above search bar
+          - No redundant center logo/text on new tab page
+          - Windows portable exe now included in releases
           - Consistent branding across desktop and mobile
 
           ## Installation
-          - Linux: Download .AppImage, make executable (chmod +x), and run
-          - Windows: Download .exe and run
-          - macOS: Download .dmg, open, drag to Applications
-          - Android: Download .apk and install (enable Install from unknown sources)
-          - iOS: Requires building from source with Xcode"
-          fi
+          - **Linux**: Download .AppImage, make executable (chmod +x), and run
+          - **Windows**: Download .exe and run (portable, no installation needed)
+          - **macOS**: Download .dmg, open, drag to Applications
+          - **Android**: Download .apk and install (enable Install from unknown sources)
+          - **iOS**: Requires building from source with Xcode"

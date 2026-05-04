@@ -86,7 +86,7 @@ class EeshaBrowser : AppCompatActivity() {
             loadsImagesAutomatically = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
-            userAgentString = "Eesha/0.4.0 (Android) " + userAgentString
+            userAgentString = "Eesha/0.5.0 (Android) " + userAgentString
         }
 
         // WebView debugging is auto-enabled for debuggable apps (debug builds)
@@ -161,8 +161,8 @@ class EeshaBrowser : AppCompatActivity() {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    justify-content: center;
-                    padding: 1rem;
+                    justify-content: flex-start;
+                    padding: 2.5rem 1rem 1rem;
                     position: relative;
                     overflow: hidden;
                 }
@@ -170,17 +170,17 @@ class EeshaBrowser : AppCompatActivity() {
                 body::after {
                     content: '';
                     position: fixed;
-                    top: 25%; left: 50%;
+                    top: 18%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 70vmin; height: 70vmin;
+                    width: 55vmin; height: 55vmin;
                     background-image: url('$iconDataUri');
                     background-size: contain;
                     background-repeat: no-repeat;
                     background-position: center;
-                    opacity: 0.12;
+                    opacity: 0.18;
                     pointer-events: none;
                 }
-                .search-container { width: 100%; max-width: 500px; }
+                .search-container { width: 100%; max-width: 500px; position: relative; z-index: 1; }
                 .search-box {
                     width: 100%; padding: 0.8rem 1.2rem; font-size: 1rem;
                     border: 2px solid rgba(255,255,255,0.1); border-radius: 0.8rem;
@@ -191,6 +191,7 @@ class EeshaBrowser : AppCompatActivity() {
                 .shortcuts {
                     display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
                     gap: 0.8rem; margin-top: 1.5rem; max-width: 500px; width: 100%;
+                    position: relative; z-index: 1;
                 }
                 .shortcut {
                     display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
@@ -204,7 +205,7 @@ class EeshaBrowser : AppCompatActivity() {
                     font-size: 1rem; font-weight: 700;
                 }
                 .shortcut-name { font-size: 0.65rem; color: rgba(255,255,255,0.7); }
-                .footer { margin-top: 2rem; color: rgba(255,255,255,0.3); font-size: 0.7rem; }
+                .footer { margin-top: 2rem; color: rgba(255,255,255,0.3); font-size: 0.7rem; position: relative; z-index: 1; }
             </style>
         </head>
         <body>
@@ -228,7 +229,7 @@ class EeshaBrowser : AppCompatActivity() {
                     <div class="shortcut-icon">X</div><span class="shortcut-name">X</span>
                 </a>
             </div>
-            <div class="footer">Eesha Browser v0.4.0 — Powered by Blink</div>
+            <div class="footer">Eesha Browser v0.5.0 — Powered by Blink</div>
             <script>
                 document.getElementById('search').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {
