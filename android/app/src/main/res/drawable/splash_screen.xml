@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Dark background with watermark -->
+    <!-- Dark background -->
     <item android:drawable="@drawable/splash_bg" />
-    <!-- Centered splash image -->
+    <!-- Single centered logo (eesha-logo.png) -->
     <item>
         <bitmap
-            android:src="@drawable/eesha_splash"
+            android:src="@drawable/eesha_logo_watermark"
             android:gravity="center" />
     </item>
 </layer-list>

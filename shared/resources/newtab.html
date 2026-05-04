@@ -25,20 +25,20 @@
       position: relative;
     }
 
-    /* Eesha logo watermark background */
+    /* Eesha logo watermark background - full res, visible */
     body::after {
       content: '';
       position: fixed;
-      top: 28%;
+      top: 25%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 45vmin;
-      height: 45vmin;
+      width: 70vmin;
+      height: 38vmin;
       background-image: url('eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.12;
+      opacity: 0.18;
       pointer-events: none;
       z-index: 0;
     }
@@ -206,7 +206,7 @@
       </a>
     </div>
   </div>
-  <div class="footer">Eesha Browser v0.5.0</div>
+  <div class="footer">Eesha Browser v0.6.0</div>
   <script>
     (function() {
       var searchInput = document.getElementById('searchInput');

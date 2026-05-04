@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 env:
-  EESHA_VERSION: "0.5.0"
+  EESHA_VERSION: "0.6.0"
 
 jobs:
   # ─── Desktop Build (Electron) ────────────────────────────────────
@@ -309,14 +309,16 @@ jobs:
           - **Android**: .apk (WebView/Chromium-based) - Download and install (enable Install from unknown sources)
           - **iOS**: Source code (requires Xcode + Apple Developer account to build)
 
-          ## What's New in v0.5.0
-          - New official Eesha icon across all platforms
-          - Google Chrome-style new tab page (white, clean, with shortcuts)
-          - Eesha logo watermark as subtle background on new tab
-          - Splash screen uses only the logo (no double images)
-          - Watermark more visible (0.12 opacity)
-          - Single logo file (eesha-logo.png) used everywhere
-          - Windows portable exe included in releases
+          ## What's New in v0.6.0
+          - All platforms now use eesha-logo.png consistently (favicon, watermark, splash, icons)
+          - Watermark uses full-resolution logo (677x369) - visible and properly sized
+          - Watermark opacity increased to 0.18 with correct landscape aspect ratio
+          - Splash screen shows only ONE image (eesha-logo.png) on all platforms
+          - New tab page: Google Chrome-style (white, search bar, shortcuts) on all platforms
+          - 8 shortcut tiles (DuckDuckGo, Wikipedia, GitHub, YouTube, Reddit, X, HN, Stack Overflow)
+          - Android: fixed watermark using full logo instead of tiny 96x96 icon
+          - iOS: fixed watermark using full logo instead of small EeshaIcon
+          - iOS splash screen simplified to single logo image
 
           ## Installation
           - **Linux**: Download .AppImage, make executable (chmod +x), and run

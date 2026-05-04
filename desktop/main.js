@@ -33,7 +33,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '0.5.0';
+const APP_VERSION = '0.6.0';
 const USER_AGENT_SUFFIX = `Eesha/${APP_VERSION}`;
 const SEARCH_ENGINE = 'https://duckduckgo.com/?q=';
 const NEWTAB_URL = 'eesha://newtab';
@@ -177,20 +177,20 @@ function getNewTabHTML() {
       position: relative;
     }
 
-    /* Eesha logo watermark background */
+    /* Eesha logo watermark background - full res, visible */
     body::after {
       content: '';
       position: fixed;
-      top: 28%;
+      top: 25%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 45vmin;
-      height: 45vmin;
+      width: 70vmin;
+      height: 38vmin;
       background-image: url('eesha://resources/resources/eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.12;
+      opacity: 0.18;
       pointer-events: none;
       z-index: 0;
     }

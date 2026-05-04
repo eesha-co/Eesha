@@ -15,43 +15,14 @@
                                        contentMode="scaleAspectFit" horizontalHuggingPriority="251"
                                        verticalHuggingPriority="251" image="splash"
                                        translatesAutoresizingMaskIntoConstraints="NO" id="SplashImage">
-                                <rect key="frame" x="107" y="298" width="200" height="300"/>
+                                <rect key="frame" x="62" y="313" width="290" height="160"/>
                             </imageView>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO"
-                                   contentMode="left" horizontalHuggingPriority="251"
-                                   verticalHuggingPriority="251" text="Eesha" textAlignment="center"
-                                   lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines"
-                                   minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="GJd-Yh-RWb">
-                                <rect key="frame" x="20" y="620" width="374" height="44"/>
-                                <fontDescription key="fontDescription" type="boldSystem" pointSize="36"/>
-                                <color key="textColor" red="0.914" green="0.271" blue="0.376" alpha="1"/>
-                                <nil key="highlightedColor"/>
-                            </label>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO"
-                                   contentMode="left" horizontalHuggingPriority="251"
-                                   verticalHuggingPriority="251" text="Fast. Private. Yours."
-                                   textAlignment="center" lineBreakMode="middleTruncation"
-                                   baselineAdjustment="alignBaselines" minimumFontSize="10"
-                                   translatesAutoresizingMaskIntoConstraints="NO" id="TagLine">
-                                <rect key="frame" x="20" y="672" width="374" height="20"/>
-                                <fontDescription key="fontDescription" type="system" weight="light" pointSize="12"/>
-                                <color key="textColor" red="0.533" green="0.533" blue="0.667" alpha="1"/>
-                                <nil key="highlightedColor"/>
-                            </label>
                         </subviews>
                         <color key="backgroundColor" red="0.102" green="0.102" blue="0.180" alpha="1"/>
                         <constraints>
                             <constraint firstItem="SplashImage" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="SplashCX"/>
-                            <constraint firstItem="SplashImage" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-50" id="SplashCY"/>
-                            <constraint firstItem="SplashImage" firstAttribute="width" secondItem="Ze5-6b-2t3" secondAttribute="width" multiplier="0.48" id="SplashW"/>
-                            <constraint firstItem="GJd-Yh-RWb" firstAttribute="top" secondItem="SplashImage" secondAttribute="bottom" constant="22" id="TitleTop"/>
-                            <constraint firstItem="GJd-Yh-RWb" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="TitleCX"/>
-                            <constraint firstItem="GJd-Yh-RWb" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" constant="20" id="TitleL"/>
-                            <constraint firstAttribute="trailing" secondItem="GJd-Yh-RWb" secondAttribute="trailing" constant="20" id="TitleR"/>
-                            <constraint firstItem="TagLine" firstAttribute="top" secondItem="GJd-Yh-RWb" secondAttribute="bottom" constant="8" id="TagTop"/>
-                            <constraint firstItem="TagLine" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="TagCX"/>
-                            <constraint firstItem="TagLine" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" constant="20" id="TagL"/>
-                            <constraint firstAttribute="trailing" secondItem="TagLine" secondAttribute="trailing" constant="20" id="TagR"/>
+                            <constraint firstItem="SplashImage" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="SplashCY"/>
+                            <constraint firstItem="SplashImage" firstAttribute="width" secondItem="Ze5-6b-2t3" secondAttribute="width" multiplier="0.7" id="SplashW"/>
                         </constraints>
                     </view>
                 </viewController>

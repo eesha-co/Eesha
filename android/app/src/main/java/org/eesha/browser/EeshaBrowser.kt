@@ -86,7 +86,7 @@ class EeshaBrowser : AppCompatActivity() {
             loadsImagesAutomatically = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
-            userAgentString = "Eesha/0.5.0 (Android) " + userAgentString
+            userAgentString = "Eesha/0.6.0 (Android) " + userAgentString
         }
 
         // WebView debugging is auto-enabled for debuggable apps (debug builds)
@@ -133,16 +133,16 @@ class EeshaBrowser : AppCompatActivity() {
     }
 
     private fun loadEeshaNewTab() {
-        // Encode logo as base64 for embedding in HTML
-        val iconBase64 = try {
-            val iconStream = resources.openRawResource(R.drawable.eesha_icon)
-            val iconBytes = iconStream.readBytes()
-            iconStream.close()
-            android.util.Base64.encodeToString(iconBytes, android.util.Base64.NO_WRAP)
+        // Encode FULL-RESOLUTION logo as base64 for watermark (677x369 eesha-logo.png)
+        val logoBase64 = try {
+            val logoStream = resources.openRawResource(R.drawable.eesha_logo_watermark)
+            val logoBytes = logoStream.readBytes()
+            logoStream.close()
+            android.util.Base64.encodeToString(logoBytes, android.util.Base64.NO_WRAP)
         } catch (e: Exception) {
             ""
         }
-        val iconDataUri = if (iconBase64.isNotEmpty()) "data:image/png;base64,$iconBase64" else ""
+        val logoDataUri = if (logoBase64.isNotEmpty()) "data:image/png;base64,$logoBase64" else ""
 
         val newTabHtml = """
         <!DOCTYPE html>
@@ -166,28 +166,30 @@ class EeshaBrowser : AppCompatActivity() {
                     position: relative;
                     overflow: hidden;
                 }
-                /* Eesha logo watermark background */
+                /* Eesha logo watermark background - full res, visible */
                 body::after {
                     content: '';
                     position: fixed;
-                    top: 28%; left: 50%;
+                    top: 25%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 45vmin; height: 45vmin;
-                    background-image: url('$iconDataUri');
+                    width: 70vmin; height: 38vmin;
+                    background-image: url('$logoDataUri');
                     background-size: contain;
                     background-repeat: no-repeat;
                     background-position: center;
-                    opacity: 0.12;
+                    opacity: 0.18;
                     pointer-events: none;
+                    z-index: 0;
                 }
                 .search-container {
                     width: 100%; max-width: 500px;
                     position: relative; z-index: 1;
                 }
                 .search-box {
-                    width: 100%; padding: 12px 16px 12px 44px; font-size: 16px;
+                    width: 100%; padding: 14px 16px 14px 46px; font-size: 16px;
                     border: 1px solid #dfe1e5; border-radius: 24px;
                     background: #fff; color: #202124; outline: none;
+                    transition: box-shadow 0.2s, border-color 0.2s;
                 }
                 .search-box:hover { box-shadow: 0 1px 6px rgba(32,33,36,0.28); border-color: transparent; }
                 .search-box:focus { box-shadow: 0 1px 6px rgba(32,33,36,0.28); border-color: transparent; }
@@ -198,28 +200,42 @@ class EeshaBrowser : AppCompatActivity() {
                 }
                 .shortcuts {
                     display: flex; flex-wrap: wrap; justify-content: center;
-                    gap: 12px; margin-top: 24px; max-width: 500px; width: 100%;
+                    gap: 16px; margin-top: 28px; max-width: 500px; width: 100%;
                     position: relative; z-index: 1;
                 }
                 .shortcut {
-                    display: flex; flex-direction: column; align-items: center; gap: 6px;
-                    padding: 8px; border-radius: 8px;
-                    text-decoration: none; color: #202124; width: 72px;
+                    display: flex; flex-direction: column; align-items: center; gap: 8px;
+                    padding: 8px; border-radius: 12px;
+                    text-decoration: none; color: #202124; width: 76px;
+                    transition: background 0.15s;
                 }
+                .shortcut:active { background: #f1f3f4; }
                 .shortcut-icon {
-                    width: 44px; height: 44px; border-radius: 50%;
+                    width: 48px; height: 48px; border-radius: 50%;
                     display: flex; align-items: center; justify-content: center;
-                    font-size: 18px; font-weight: 700; color: #fff;
+                    font-size: 20px; font-weight: 700; color: #fff;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
                 }
-                .shortcut-name { font-size: 11px; color: #5f6368; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px; }
+                .shortcut-name {
+                    font-size: 11px; color: #5f6368; text-align: center;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 68px;
+                }
+                .footer {
+                    position: fixed; bottom: 12px; left: 0; right: 0;
+                    text-align: center; font-size: 11px; color: #9aa0a6;
+                    z-index: 1; pointer-events: none;
+                }
             </style>
         </head>
         <body>
             <div class="search-container">
-                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" class="search-box" id="search" placeholder="Search or enter URL" autofocus>
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="search-box" id="search" placeholder="Search with DuckDuckGo or enter URL" autofocus>
             </div>
             <div class="shortcuts">
+                <a class="shortcut" href="https://duckduckgo.com">
+                    <div class="shortcut-icon" style="background:#DE5833;">D</div><span class="shortcut-name">DuckDuckGo</span>
+                </a>
                 <a class="shortcut" href="https://www.wikipedia.org">
                     <div class="shortcut-icon" style="background:#636466;">W</div><span class="shortcut-name">Wikipedia</span>
                 </a>
@@ -235,7 +251,14 @@ class EeshaBrowser : AppCompatActivity() {
                 <a class="shortcut" href="https://twitter.com">
                     <div class="shortcut-icon" style="background:#1DA1F2;">X</div><span class="shortcut-name">X</span>
                 </a>
+                <a class="shortcut" href="https://news.ycombinator.com">
+                    <div class="shortcut-icon" style="background:#FF6600;">H</div><span class="shortcut-name">HN</span>
+                </a>
+                <a class="shortcut" href="https://stackoverflow.com">
+                    <div class="shortcut-icon" style="background:#F48024;">S</div><span class="shortcut-name">Stack Overflow</span>
+                </a>
             </div>
+            <div class="footer">Eesha Browser</div>
             <script>
                 document.getElementById('search').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {
