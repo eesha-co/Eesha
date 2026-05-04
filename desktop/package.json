@@ -1,6 +1,6 @@
 {
   "name": "eesha-browser",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Eesha - A privacy-first browser powered by Chromium",
   "main": "main.js",
   "author": {

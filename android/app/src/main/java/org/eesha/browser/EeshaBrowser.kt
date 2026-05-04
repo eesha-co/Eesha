@@ -86,7 +86,7 @@ class EeshaBrowser : AppCompatActivity() {
             loadsImagesAutomatically = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
-            userAgentString = "Eesha/0.6.1 (Android) " + userAgentString
+            userAgentString = "Eesha/0.6.2 (Android) " + userAgentString
         }
 
         // WebView debugging is auto-enabled for debuggable apps (debug builds)
@@ -133,9 +133,9 @@ class EeshaBrowser : AppCompatActivity() {
     }
 
     private fun loadEeshaNewTab() {
-        // Encode FULL-RESOLUTION logo as base64 for watermark (677x369 eesha-logo.png)
+        // Encode FULL-RESOLUTION logo as base64 for watermark (shared/icons/eesha-logo.png)
         val logoBase64 = try {
-            val logoStream = resources.openRawResource(R.drawable.eesha_logo_watermark)
+            val logoStream = resources.openRawResource(R.drawable.eesha_logo)
             val logoBytes = logoStream.readBytes()
             logoStream.close()
             android.util.Base64.encodeToString(logoBytes, android.util.Base64.NO_WRAP)

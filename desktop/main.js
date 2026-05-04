@@ -33,7 +33,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '0.6.1';
+const APP_VERSION = '0.6.2';
 const USER_AGENT_SUFFIX = `Eesha/${APP_VERSION}`;
 const SEARCH_ENGINE = 'https://duckduckgo.com/?q=';
 const NEWTAB_URL = 'eesha://newtab';
@@ -156,7 +156,7 @@ function getNewTabHTML() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Tab - Eesha</title>
-  <link rel="icon" type="image/png" href="eesha://resources/resources/eesha-logo.png">
+  <link rel="icon" type="image/png" href="eesha://resources/icons/eesha-logo.png">
   <style>
     *, *::before, *::after {
       margin: 0;
@@ -186,7 +186,7 @@ function getNewTabHTML() {
       transform: translate(-50%, -50%);
       width: 70vmin;
       height: 38vmin;
-      background-image: url('eesha://resources/resources/eesha-logo.png');
+      background-image: url('eesha://resources/icons/eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
@@ -521,7 +521,7 @@ function setupAdBlocking(ses) {
 let splashWindow = null;
 
 function createSplashScreen() {
-  const logoImage = path.join(RESOURCES_DIR, 'eesha-logo.png');
+  const logoImage = path.join(ICONS_DIR, 'eesha-logo.png');
   
   splashWindow = new BrowserWindow({
     width: 480,
