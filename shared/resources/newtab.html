@@ -25,20 +25,20 @@
       position: relative;
     }
 
-    /* Watermark logo background */
+    /* Watermark logo background - Grok/z.ai style large centered logo */
     body::after {
       content: '';
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 60vmin;
-      height: 60vmin;
+      width: 85vmin;
+      height: 85vmin;
       background-image: url('eesha://resources/icons/eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.04;
+      opacity: 0.07;
       pointer-events: none;
       z-index: 0;
     }
@@ -253,7 +253,7 @@
       </a>
     </div>
   </div>
-  <div class="footer">Eesha Browser v0.3.0 &mdash; Privacy-first browsing</div>
+  <div class="footer">Eesha Browser v0.4.0 &mdash; Privacy-first browsing</div>
   <script>
     (function() {
       var searchInput = document.getElementById('searchInput');

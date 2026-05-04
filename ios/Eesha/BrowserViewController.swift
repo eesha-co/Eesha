@@ -216,14 +216,15 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
     @objc private func goHome() { loadEeshaNewTab() }
 
     private func loadEeshaNewTab() {
-        // Load logo image as base64 for embedding in HTML
-        var logoDataUri = ""
-        if let logoUrl = Bundle.main.url(forResource: "splash", withExtension: "png", subdirectory: "Eesha"),
-           let logoData = try? Data(contentsOf: logoUrl) {
-            logoDataUri = "data:image/png;base64,\(logoData.base64EncodedString())"
-        } else if let splashImage = UIImage(named: "SplashImage"),
-                  let pngData = splashImage.pngData() {
-            logoDataUri = "data:image/png;base64,\(pngData.base64EncodedString())"
+        // Load icon image as base64 for embedding in HTML
+        var iconDataUri = ""
+        // Try to load from EeshaIcon asset catalog
+        if let iconImage = UIImage(named: "EeshaIcon"),
+           let pngData = iconImage.pngData() {
+            iconDataUri = "data:image/png;base64,\(pngData.base64EncodedString())"
+        } else if let iconUrl = Bundle.main.url(forResource: "eesha_icon", withExtension: "png", subdirectory: "Eesha"),
+                  let iconData = try? Data(contentsOf: iconUrl) {
+            iconDataUri = "data:image/png;base64,\(iconData.base64EncodedString())"
         }
 
         let html = """
@@ -243,17 +244,18 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                     justify-content: center; padding: 1rem;
                     position: relative; overflow: hidden;
                 }
+                /* Watermark logo background - Grok/z.ai style large centered logo */
                 body::after {
                     content: '';
                     position: fixed;
                     top: 50%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 60vmin; height: 60vmin;
-                    background-image: url('\(logoDataUri)');
+                    width: 85vmin; height: 85vmin;
+                    background-image: url('\(iconDataUri)');
                     background-size: contain;
                     background-repeat: no-repeat;
                     background-position: center;
-                    opacity: 0.04;
+                    opacity: 0.07;
                     pointer-events: none;
                 }
                 .logo-container { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
@@ -288,7 +290,7 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
         </head>
         <body>
             <div class="logo-container">
-                \(logoDataUri.isEmpty ? "" : "<img class=\"logo-img\" src=\"\(logoDataUri)\" alt=\"Eesha Logo\">")
+                \(iconDataUri.isEmpty ? "" : "<img class=\"logo-img\" src=\"\(iconDataUri)\" alt=\"Eesha Logo\">")
                 <div class="logo-text">Eesha</div>
             </div>
             <div class="search-container">
@@ -311,7 +313,7 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                     <div class="shortcut-icon">X</div><span class="shortcut-name">X</span>
                 </a>
             </div>
-            <div class="footer">Eesha Browser v0.3.0</div>
+            <div class="footer">Eesha Browser v0.4.0</div>
             <script>
                 document.getElementById('search').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {

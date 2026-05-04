@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 env:
-  EESHA_VERSION: "0.3.0"
+  EESHA_VERSION: "0.4.0"
 
 jobs:
   # ─── Desktop Build (Electron) ────────────────────────────────────
@@ -66,8 +66,8 @@ jobs:
           # Find and rename it
           $portable = Get-ChildItem -File | Where-Object { $_.Extension -eq '' -and $_.Length -gt 10MB }
           if ($portable) {
-            Rename-Item $portable.FullName "Eesha-0.3.0-portable.exe"
-            Write-Host "Renamed $($portable.Name) to Eesha-0.3.0-portable.exe"
+            Rename-Item $portable.FullName "Eesha-0.4.0-portable.exe"
+            Write-Host "Renamed $($portable.Name) to Eesha-0.4.0-portable.exe"
           }
           # List all files
           Get-ChildItem -File | ForEach-Object { Write-Host "$($_.Name) ($([math]::Round($_.Length/1MB,1))MB)" }
@@ -263,8 +263,8 @@ jobs:
             SIZE=$(stat -c%s "$f" 2>/dev/null || echo 0)
             if [ "$SIZE" -gt 10000000 ]; then
               # Large file without extension is likely the Windows portable exe
-              cp "$f" "valid-artifacts/Eesha-0.3.0-portable.exe"
-              echo "Including (renamed): $(basename $f) → Eesha-0.3.0-portable.exe (${SIZE} bytes)"
+              cp "$f" "valid-artifacts/Eesha-0.4.0-portable.exe"
+              echo "Including (renamed): $(basename $f) → Eesha-0.4.0-portable.exe (${SIZE} bytes)"
             fi
           done
 
@@ -301,17 +301,13 @@ jobs:
           - **Android** — \`.apk\` (WebView/Chromium-based)
           - **iOS** — Source code (requires Xcode + Apple Developer account to build)
 
-          ## ✨ What's New in v0.3.0
-          - 🎨 New custom branding with official Eesha logo
-          - 🖼️ Splash screen on startup (desktop + mobile)
-          - 💧 Watermark logo background on new tab page
-          - 🏷️ Custom app icons across all platforms
-          - Electron-based desktop with multi-tab browsing
-          - Built-in ad/tracker blocking (50+ domains)
-          - Custom Eesha new tab page with DuckDuckGo search
-          - Privacy-first: no Google telemetry, HTTPS upgrade
-          - Android WebView browser with ad blocking
-          - iOS WKWebView browser with tracker blocking
+          ## ✨ What's New in v0.4.0
+          - 🎨 Updated official Eesha icon across all platforms
+          - 🖼️ New splash screen with branded image
+          - 💧 Grok/z.ai-style large logo watermark on new tab page
+          - 🏷️ Custom app icons regenerated from official logo
+          - 🖥️ Splash screen uses dedicated splash image
+          - 📱 Consistent branding across desktop and mobile
 
           ## 🚀 Installation
           ### Desktop

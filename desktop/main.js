@@ -33,7 +33,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.4.0';
 const USER_AGENT_SUFFIX = `Eesha/${APP_VERSION}`;
 const SEARCH_ENGINE = 'https://duckduckgo.com/?q=';
 const NEWTAB_URL = 'eesha://newtab';
@@ -177,20 +177,20 @@ function getNewTabHTML() {
       position: relative;
     }
 
-    /* Watermark logo background */
+    /* Watermark logo background - Grok/z.ai style large centered logo */
     body::after {
       content: '';
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 60vmin;
-      height: 60vmin;
+      width: 85vmin;
+      height: 85vmin;
       background-image: url('eesha://resources/icons/eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.04;
+      opacity: 0.07;
       pointer-events: none;
       z-index: 0;
     }
@@ -570,10 +570,11 @@ let splashWindow = null;
 
 function createSplashScreen() {
   const splashImage = path.join(RESOURCES_DIR, 'eesha-splash.png');
+  const iconImage = path.join(ICONS_DIR, 'eesha-logo.png');
   
   splashWindow = new BrowserWindow({
-    width: 480,
-    height: 640,
+    width: 520,
+    height: 680,
     transparent: true,
     frame: false,
     resizable: false,
@@ -597,46 +598,56 @@ function createSplashScreen() {
       align-items: center;
       justify-content: center;
     }
+    /* Watermark icon behind splash content */
     body::after {
       content: '';
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-image: url('${splashImage.replace(/\\/g, '/')}');
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      height: 90%;
+      background-image: url('${iconImage.replace(/\\/g, '/')}');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.06;
+      opacity: 0.05;
       pointer-events: none;
     }
     .splash-content {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
+      justify-content: center;
+      gap: 20px;
       z-index: 1;
+      width: 100%;
+      height: 100%;
+      padding: 40px;
     }
-    .splash-logo {
-      width: 200px;
-      height: auto;
+    .splash-image {
+      max-width: 90%;
+      max-height: 55%;
+      object-fit: contain;
       filter: drop-shadow(0 8px 32px rgba(233, 69, 96, 0.3));
-      border-radius: 24px;
+      border-radius: 16px;
     }
     .splash-title {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 700;
       color: #ffffff;
       letter-spacing: -0.5px;
     }
     .splash-tagline {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 12px;
+      font-size: 11px;
       color: #8888aa;
       letter-spacing: 3px;
       text-transform: uppercase;
     }
     .splash-loader {
-      margin-top: 16px;
+      margin-top: 8px;
       width: 120px;
       height: 3px;
       background: rgba(233, 69, 96, 0.2);
@@ -660,7 +671,7 @@ function createSplashScreen() {
 </head>
 <body>
   <div class="splash-content">
-    <img class="splash-logo" src="${splashImage.replace(/\\/g, '/')}" alt="Eesha"
+    <img class="splash-image" src="${splashImage.replace(/\\/g, '/')}" alt="Eesha"
       onerror="this.style.display='none'">
     <div class="splash-title">Eesha</div>
     <div class="splash-tagline">Fast. Private. Yours.</div>

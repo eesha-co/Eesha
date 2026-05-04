@@ -86,7 +86,7 @@ class EeshaBrowser : AppCompatActivity() {
             loadsImagesAutomatically = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
-            userAgentString = "Eesha/0.3.0 (Android) " + userAgentString
+            userAgentString = "Eesha/0.4.0 (Android) " + userAgentString
         }
 
         // WebView debugging is auto-enabled for debuggable apps (debug builds)
@@ -134,15 +134,15 @@ class EeshaBrowser : AppCompatActivity() {
 
     private fun loadEeshaNewTab() {
         // Encode logo as base64 for embedding in HTML
-        val logoBase64 = try {
-            val logoStream = resources.openRawResource(R.drawable.eesha_splash)
-            val logoBytes = logoStream.readBytes()
-            logoStream.close()
-            android.util.Base64.encodeToString(logoBytes, android.util.Base64.NO_WRAP)
+        val iconBase64 = try {
+            val iconStream = resources.openRawResource(R.drawable.eesha_icon)
+            val iconBytes = iconStream.readBytes()
+            iconStream.close()
+            android.util.Base64.encodeToString(iconBytes, android.util.Base64.NO_WRAP)
         } catch (e: Exception) {
             ""
         }
-        val logoDataUri = if (logoBase64.isNotEmpty()) "data:image/png;base64,$logoBase64" else ""
+        val iconDataUri = if (iconBase64.isNotEmpty()) "data:image/png;base64,$iconBase64" else ""
 
         val newTabHtml = """
         <!DOCTYPE html>
@@ -166,17 +166,18 @@ class EeshaBrowser : AppCompatActivity() {
                     position: relative;
                     overflow: hidden;
                 }
+                /* Watermark logo background - Grok/z.ai style large centered logo */
                 body::after {
                     content: '';
                     position: fixed;
                     top: 50%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 60vmin; height: 60vmin;
-                    background-image: url('$logoDataUri');
+                    width: 85vmin; height: 85vmin;
+                    background-image: url('$iconDataUri');
                     background-size: contain;
                     background-repeat: no-repeat;
                     background-position: center;
-                    opacity: 0.04;
+                    opacity: 0.07;
                     pointer-events: none;
                 }
                 .logo-container { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
@@ -211,7 +212,7 @@ class EeshaBrowser : AppCompatActivity() {
         </head>
         <body>
             <div class="logo-container">
-                ${if (logoDataUri.isNotEmpty()) """<img class="logo-img" src="$logoDataUri" alt="Eesha Logo">""" else ""}
+                ${if (iconDataUri.isNotEmpty()) """<img class="logo-img" src="$iconDataUri" alt="Eesha Logo">""" else ""}
                 <div class="logo-text">Eesha</div>
             </div>
             <div class="search-container">
@@ -234,7 +235,7 @@ class EeshaBrowser : AppCompatActivity() {
                     <div class="shortcut-icon">X</div><span class="shortcut-name">X</span>
                 </a>
             </div>
-            <div class="footer">Eesha Browser v0.3.0 — Powered by Blink</div>
+            <div class="footer">Eesha Browser v0.4.0 — Powered by Blink</div>
             <script>
                 document.getElementById('search').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {
