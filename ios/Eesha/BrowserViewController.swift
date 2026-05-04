@@ -238,76 +238,82 @@ class BrowserViewController: UIViewController, WKNavigationDelegate, WKUIDelegat
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-                    color: #fff; min-height: 100vh;
+                    background: #ffffff;
+                    color: #202124; min-height: 100vh;
                     display: flex; flex-direction: column; align-items: center;
-                    justify-content: flex-start; padding: 2.5rem 1rem 1rem;
+                    justify-content: flex-start; padding: 12vh 1rem 1rem;
                     position: relative; overflow: hidden;
                 }
-                /* Watermark logo background - positioned above search area */
+                /* Eesha logo watermark background */
                 body::after {
                     content: '';
                     position: fixed;
-                    top: 18%; left: 50%;
+                    top: 28%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 55vmin; height: 55vmin;
+                    width: 45vmin; height: 45vmin;
                     background-image: url('\(iconDataUri)');
                     background-size: contain;
                     background-repeat: no-repeat;
                     background-position: center;
-                    opacity: 0.18;
+                    opacity: 0.12;
                     pointer-events: none;
                 }
-                .search-container { width: 100%; max-width: 500px; position: relative; z-index: 1; }
-                .search-box {
-                    width: 100%; padding: 0.8rem 1.2rem; font-size: 1rem;
-                    border: 2px solid rgba(255,255,255,0.1); border-radius: 0.8rem;
-                    background: rgba(255,255,255,0.05); color: #fff; outline: none;
+                .search-container {
+                    width: 100%; max-width: 500px;
+                    position: relative; z-index: 1;
                 }
-                .search-box:focus { border-color: #e94560; background: rgba(255,255,255,0.1); }
-                .search-box::placeholder { color: rgba(255,255,255,0.4); }
+                .search-box {
+                    width: 100%; padding: 12px 16px 12px 44px; font-size: 16px;
+                    border: 1px solid #dfe1e5; border-radius: 24px;
+                    background: #fff; color: #202124; outline: none;
+                }
+                .search-box:hover { box-shadow: 0 1px 6px rgba(32,33,36,0.28); border-color: transparent; }
+                .search-box:focus { box-shadow: 0 1px 6px rgba(32,33,36,0.28); border-color: transparent; }
+                .search-box::placeholder { color: #9aa0a6; }
+                .search-icon {
+                    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+                    color: #9aa0a6; pointer-events: none;
+                }
                 .shortcuts {
-                    display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-                    gap: 0.8rem; margin-top: 1.5rem; max-width: 500px; width: 100%;
+                    display: flex; flex-wrap: wrap; justify-content: center;
+                    gap: 12px; margin-top: 24px; max-width: 500px; width: 100%;
                     position: relative; z-index: 1;
                 }
                 .shortcut {
-                    display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
-                    padding: 0.8rem 0.3rem; border-radius: 0.6rem;
-                    background: rgba(255,255,255,0.05); text-decoration: none; color: #fff;
+                    display: flex; flex-direction: column; align-items: center; gap: 6px;
+                    padding: 8px; border-radius: 8px;
+                    text-decoration: none; color: #202124; width: 72px;
                 }
-                .shortcut:active { background: rgba(255,255,255,0.2); }
                 .shortcut-icon {
-                    width: 36px; height: 36px; border-radius: 50%; background: #e94560;
+                    width: 44px; height: 44px; border-radius: 50%;
                     display: flex; align-items: center; justify-content: center;
-                    font-size: 1rem; font-weight: 700;
+                    font-size: 18px; font-weight: 700; color: #fff;
                 }
-                .shortcut-name { font-size: 0.65rem; color: rgba(255,255,255,0.7); }
-                .footer { margin-top: 2rem; color: rgba(255,255,255,0.3); font-size: 0.7rem; position: relative; z-index: 1; }
+                .shortcut-name { font-size: 11px; color: #5f6368; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px; }
             </style>
         </head>
         <body>
             <div class="search-container">
-                <input type="text" class="search-box" id="search" placeholder="Search the web or enter a URL" autofocus>
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="search-box" id="search" placeholder="Search or enter URL" autofocus>
             </div>
             <div class="shortcuts">
                 <a class="shortcut" href="https://www.wikipedia.org">
-                    <div class="shortcut-icon">W</div><span class="shortcut-name">Wikipedia</span>
+                    <div class="shortcut-icon" style="background:#636466;">W</div><span class="shortcut-name">Wikipedia</span>
                 </a>
                 <a class="shortcut" href="https://github.com">
-                    <div class="shortcut-icon">G</div><span class="shortcut-name">GitHub</span>
+                    <div class="shortcut-icon" style="background:#24292e;">G</div><span class="shortcut-name">GitHub</span>
                 </a>
                 <a class="shortcut" href="https://www.youtube.com">
-                    <div class="shortcut-icon">Y</div><span class="shortcut-name">YouTube</span>
+                    <div class="shortcut-icon" style="background:#FF0000;">Y</div><span class="shortcut-name">YouTube</span>
                 </a>
                 <a class="shortcut" href="https://www.reddit.com">
-                    <div class="shortcut-icon">R</div><span class="shortcut-name">Reddit</span>
+                    <div class="shortcut-icon" style="background:#FF4500;">R</div><span class="shortcut-name">Reddit</span>
                 </a>
                 <a class="shortcut" href="https://twitter.com">
-                    <div class="shortcut-icon">X</div><span class="shortcut-name">X</span>
+                    <div class="shortcut-icon" style="background:#1DA1F2;">X</div><span class="shortcut-name">X</span>
                 </a>
             </div>
-            <div class="footer">Eesha Browser v0.5.0</div>
             <script>
                 document.getElementById('search').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {

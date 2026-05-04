@@ -156,7 +156,7 @@ function getNewTabHTML() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Tab - Eesha</title>
-  <link rel="icon" type="image/png" href="eesha://resources/icons/icon32x32.png">
+  <link rel="icon" type="image/png" href="eesha://resources/resources/eesha-logo.png">
   <style>
     *, *::before, *::after {
       margin: 0;
@@ -166,8 +166,8 @@ function getNewTabHTML() {
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 40%, #16213e 100%);
-      color: #e0e0e0;
+      background: #ffffff;
+      color: #202124;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -177,146 +177,135 @@ function getNewTabHTML() {
       position: relative;
     }
 
-    /* Watermark logo background - Grok/z.ai style, positioned above search */
+    /* Eesha logo watermark background */
     body::after {
       content: '';
       position: fixed;
-      top: 18%;
+      top: 28%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 55vmin;
-      height: 55vmin;
-      background-image: url('eesha://resources/icons/eesha-logo.png');
+      width: 45vmin;
+      height: 45vmin;
+      background-image: url('eesha://resources/resources/eesha-logo.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.18;
+      opacity: 0.12;
       pointer-events: none;
       z-index: 0;
-    }
-
-    body::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(233, 69, 96, 0.06) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(66, 133, 244, 0.04) 0%, transparent 50%);
-      pointer-events: none;
     }
 
     .container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 28px;
+      gap: 24px;
       max-width: 680px;
       width: 100%;
-      padding: 64px 32px 32px;
+      padding: 15vh 32px 32px;
       position: relative;
       z-index: 1;
     }
 
     .search-wrapper {
       width: 100%;
+      max-width: 584px;
       position: relative;
     }
 
     .search-bar {
       width: 100%;
-      padding: 16px 20px 16px 52px;
-      background: rgba(22, 33, 62, 0.8);
-      border: 1.5px solid #2a2a4a;
-      border-radius: 16px;
-      color: #f0f0f0;
+      padding: 12px 16px 12px 48px;
+      background: #ffffff;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
+      color: #202124;
       font-size: 16px;
       outline: none;
-      transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
-      backdrop-filter: blur(8px);
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
-    .search-bar::placeholder { color: #5a5a7a; }
+    .search-bar:hover {
+      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+      border-color: rgba(223,225,229,0);
+    }
 
     .search-bar:focus {
-      border-color: #e94560;
-      box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.15), 0 8px 32px rgba(0, 0, 0, 0.2);
-      background: rgba(22, 33, 62, 0.95);
+      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+      border-color: rgba(223,225,229,0);
     }
+
+    .search-bar::placeholder { color: #9aa0a6; }
 
     .search-icon {
       position: absolute;
-      left: 18px;
+      left: 16px;
       top: 50%;
       transform: translateY(-50%);
-      color: #5a5a7a;
+      color: #9aa0a6;
       pointer-events: none;
-      transition: color 0.25s ease;
     }
 
-    .search-bar:focus ~ .search-icon { color: #e94560; }
-
-    .quick-links {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
+    .shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
       width: 100%;
+      max-width: 584px;
+      padding-top: 8px;
     }
 
-    .quick-link {
+    .shortcut {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
-      padding: 18px 12px;
-      background: rgba(22, 33, 62, 0.6);
-      border: 1px solid #2a2a4a;
-      border-radius: 14px;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 8px;
       text-decoration: none;
-      color: #c0c0d0;
-      transition: all 0.25s ease;
+      color: #202124;
       cursor: pointer;
-      backdrop-filter: blur(4px);
+      transition: background 0.15s ease;
+      width: 80px;
     }
 
-    .quick-link:hover {
-      background: rgba(30, 45, 75, 0.8);
-      border-color: #e94560;
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-      color: #f0f0f0;
+    .shortcut:hover {
+      background: #f1f3f4;
     }
 
-    .quick-link-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
+    .shortcut-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 700;
       color: #fff;
-      transition: transform 0.2s ease;
+      transition: transform 0.15s ease;
     }
 
-    .quick-link:hover .quick-link-icon { transform: scale(1.1); }
+    .shortcut:hover .shortcut-icon { transform: scale(1.08); }
 
-    .quick-link-label {
+    .shortcut-label {
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 400;
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 100%;
+      max-width: 72px;
+      color: #5f6368;
     }
 
     .footer {
-      position: absolute;
-      bottom: 20px;
+      position: fixed;
+      bottom: 16px;
       font-size: 11px;
-      color: #3a3a5a;
-      letter-spacing: 0.5px;
+      color: #9aa0a6;
+      letter-spacing: 0.3px;
     }
   </style>
 </head>
@@ -332,44 +321,44 @@ function getNewTabHTML() {
       </svg>
     </div>
 
-    <div class="quick-links">
-      <a class="quick-link" href="https://duckduckgo.com">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #DE5833, #F5A623);">D</div>
-        <span class="quick-link-label">DuckDuckGo</span>
+    <div class="shortcuts">
+      <a class="shortcut" href="https://duckduckgo.com">
+        <div class="shortcut-icon" style="background: #DE5833;">D</div>
+        <span class="shortcut-label">DuckDuckGo</span>
       </a>
-      <a class="quick-link" href="https://www.wikipedia.org">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #636466, #3a3a3c);">W</div>
-        <span class="quick-link-label">Wikipedia</span>
+      <a class="shortcut" href="https://www.wikipedia.org">
+        <div class="shortcut-icon" style="background: #636466;">W</div>
+        <span class="shortcut-label">Wikipedia</span>
       </a>
-      <a class="quick-link" href="https://github.com">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #333, #24292e);">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      <a class="shortcut" href="https://github.com">
+        <div class="shortcut-icon" style="background: #24292e;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
         </div>
-        <span class="quick-link-label">GitHub</span>
+        <span class="shortcut-label">GitHub</span>
       </a>
-      <a class="quick-link" href="https://www.reddit.com">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #FF4500, #FF6B35);">R</div>
-        <span class="quick-link-label">Reddit</span>
+      <a class="shortcut" href="https://www.reddit.com">
+        <div class="shortcut-icon" style="background: #FF4500;">R</div>
+        <span class="shortcut-label">Reddit</span>
       </a>
-      <a class="quick-link" href="https://www.youtube.com">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #FF0000, #CC0000);">Y</div>
-        <span class="quick-link-label">YouTube</span>
+      <a class="shortcut" href="https://www.youtube.com">
+        <div class="shortcut-icon" style="background: #FF0000;">Y</div>
+        <span class="shortcut-label">YouTube</span>
       </a>
-      <a class="quick-link" href="https://news.ycombinator.com">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #FF6600, #FF8533);">H</div>
-        <span class="quick-link-label">Hacker News</span>
+      <a class="shortcut" href="https://news.ycombinator.com">
+        <div class="shortcut-icon" style="background: #FF6600;">H</div>
+        <span class="shortcut-label">HN</span>
       </a>
-      <a class="quick-link" href="https://stackoverflow.com">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #F48024, #E36D25);">S</div>
-        <span class="quick-link-label">Stack Overflow</span>
+      <a class="shortcut" href="https://stackoverflow.com">
+        <div class="shortcut-icon" style="background: #F48024;">S</div>
+        <span class="shortcut-label">Stack Overflow</span>
       </a>
-      <a class="quick-link" href="https://mastodon.social">
-        <div class="quick-link-icon" style="background: linear-gradient(135deg, #6364FF, #563ACC);">M</div>
-        <span class="quick-link-label">Mastodon</span>
+      <a class="shortcut" href="https://mastodon.social">
+        <div class="shortcut-icon" style="background: #6364FF;">M</div>
+        <span class="shortcut-label">Mastodon</span>
       </a>
     </div>
   </div>
-  <div class="footer">Eesha Browser v${APP_VERSION} &mdash; Privacy-first browsing</div>
+  <div class="footer">Eesha Browser v${APP_VERSION}</div>
   <script>
     (function() {
       var searchInput = document.getElementById('searchInput');
@@ -387,8 +376,7 @@ function getNewTabHTML() {
           }
         }
       });
-      // Quick links use eesha.navigate
-      document.querySelectorAll('.quick-link').forEach(function(link) {
+      document.querySelectorAll('.shortcut').forEach(function(link) {
         link.addEventListener('click', function(e) {
           e.preventDefault();
           window.eesha.navigate(this.href);
@@ -533,12 +521,11 @@ function setupAdBlocking(ses) {
 let splashWindow = null;
 
 function createSplashScreen() {
-  const splashImage = path.join(RESOURCES_DIR, 'eesha-splash.png');
-  const iconImage = path.join(ICONS_DIR, 'eesha-logo.png');
+  const logoImage = path.join(RESOURCES_DIR, 'eesha-logo.png');
   
   splashWindow = new BrowserWindow({
-    width: 520,
-    height: 680,
+    width: 480,
+    height: 360,
     transparent: true,
     frame: false,
     resizable: false,
@@ -562,42 +549,25 @@ function createSplashScreen() {
       align-items: center;
       justify-content: center;
     }
-    /* Subtle watermark behind splash content */
-    body::after {
-      content: '';
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 70%;
-      height: 70%;
-      background-image: url('${iconImage.replace(/\\/g, '/')}');
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      opacity: 0.04;
-      pointer-events: none;
-    }
     .splash-content {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 16px;
+      gap: 20px;
       z-index: 1;
       width: 100%;
       height: 100%;
-      padding: 30px;
+      padding: 40px;
     }
-    .splash-image {
-      max-width: 65%;
-      max-height: 30%;
+    .splash-logo {
+      max-width: 70%;
+      max-height: 50%;
       object-fit: contain;
-      filter: drop-shadow(0 4px 16px rgba(233, 69, 96, 0.2));
     }
     .splash-title {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 700;
       color: #ffffff;
       letter-spacing: -0.5px;
@@ -634,7 +604,7 @@ function createSplashScreen() {
 </head>
 <body>
   <div class="splash-content">
-    <img class="splash-image" src="${splashImage.replace(/\\/g, '/')}" alt="Eesha"
+    <img class="splash-logo" src="${logoImage.replace(/\\/g, '/')}" alt="Eesha"
       onerror="this.style.display='none'">
     <div class="splash-title">Eesha</div>
     <div class="splash-tagline">Fast. Private. Yours.</div>

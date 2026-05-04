@@ -311,12 +311,12 @@ jobs:
 
           ## What's New in v0.5.0
           - New official Eesha icon across all platforms
-          - Splash screen properly fitted (no more zoom/crop)
-          - Watermark more visible (opacity increased)
-          - Watermark positioned above search bar
-          - No redundant center logo/text on new tab page
-          - Windows portable exe now included in releases
-          - Consistent branding across desktop and mobile
+          - Google Chrome-style new tab page (white, clean, with shortcuts)
+          - Eesha logo watermark as subtle background on new tab
+          - Splash screen uses only the logo (no double images)
+          - Watermark more visible (0.12 opacity)
+          - Single logo file (eesha-logo.png) used everywhere
+          - Windows portable exe included in releases
 
           ## Installation
           - **Linux**: Download .AppImage, make executable (chmod +x), and run
